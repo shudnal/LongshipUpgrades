@@ -361,3 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/package/thunderstore/LongshipUpgrades/LongshipUpgrades.dll
+/package/thunderstore/LongshipUpgrades.zip
