@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using HarmonyLib;
+using System.Linq;
 using UnityEngine;
 
 namespace LongshipUpgrades
@@ -11,9 +12,18 @@ namespace LongshipUpgrades
         private GameObject m_beamMast;
         private GameObject m_insects;
         private GameObject m_fireWarmth;
+        private GameObject m_tent;
+        private GameObject m_lantern;
+        
+        private GameObject[] m_lightParts;
 
         public const string prefabName = "VikingShip";
         private static bool prefabFixed = false;
+
+        private static Material lampSharedMaterial;
+        private static Color lampColor;
+        private static bool isTimeForInsects;
+        private static bool isTimeToLight = true;
 
         private void Awake()
         {
@@ -40,9 +50,9 @@ namespace LongshipUpgrades
 
                 beam.localPosition += new Vector3(0.1f, 0f, 0f);
 
-                Transform tent = transform.Find("ship/visual/Customize/ShipTen2 (1)");
+                m_tent = transform.Find("ship/visual/Customize/ShipTen2 (1)").gameObject;
                 Transform tentColliders = new GameObject("colliders").transform;
-                tentColliders.SetParent(tent, false);
+                tentColliders.SetParent(m_tent.transform, false);
 
                 Transform tentCollider = AddCollider(tentColliders, "collider_right", typeof(BoxCollider));
                 tentCollider.localPosition = new Vector3(1.58f, 1.18f, -0.65f);
@@ -62,10 +72,14 @@ namespace LongshipUpgrades
                 Transform lamp = transform.Find("ship/visual/Customize/TraderLamp");
                 lamp.gameObject.SetActive(false);
 
-                Transform lanternParent = new GameObject("Lantern").transform;
+                m_lantern = new GameObject("Lantern")
+                {
+                    layer = 28 // vehicle
+                };
+
+                Transform lanternParent = m_lantern.transform;
                 lanternParent.SetParent(transform.Find("ship/visual/Customize"), false);
                 lanternParent.localScale = Vector3.one * 0.45f;
-                lanternParent.gameObject.layer = 28; // vehicle
 
                 GameObject lanternItem = ObjectDB.instance.GetItemPrefab("Lantern");
                 Transform lantern = Instantiate(lanternItem.transform.Find("attach/equiped").gameObject, lanternParent).transform;
@@ -75,6 +89,18 @@ namespace LongshipUpgrades
 
                 Light light = lantern.GetComponentInChildren<Light>();
                 light.color = lamp.GetComponentInChildren<Light>().color;
+
+                m_lightParts = new GameObject[] { light.gameObject, lantern.Find("flare").gameObject };
+
+                MeshRenderer lampRenderer = lantern.Find("default").GetComponent<MeshRenderer>();
+
+                if (lampSharedMaterial == null)
+                {
+                    lampSharedMaterial = new Material(lampRenderer.sharedMaterial);
+                    lampColor = lampSharedMaterial.GetColor("_EmissionColor");
+                }
+
+                lampRenderer.sharedMaterial = lampSharedMaterial;
 
                 ConfigurableJoint joint = lantern.GetComponent<ConfigurableJoint>();
                 joint.autoConfigureConnectedAnchor = false;
@@ -112,15 +138,60 @@ namespace LongshipUpgrades
                 // tent
                 // shields
                 // heads
+                // On ship destroy spawn spent mats
             }
         }
 
         private void FixedUpdate()
         {
-            m_insects.SetActive(!EnvMan.IsDaylight());
+            if (m_lantern.activeInHierarchy && (isTimeForInsects != IsTimeForInsects() || isTimeToLight != IsTimeToLight()))
+            {
+                isTimeForInsects = IsTimeForInsects();
+                isTimeToLight = IsTimeToLight();
+                UpdateLights();
+            }
         }
 
-        internal static void FixCustomizableParts()
+        private void UpdateLights()
+        {
+            m_insects?.SetActive(isTimeForInsects);
+
+            m_lightParts?.Do(part => part?.SetActive(isTimeToLight));
+            lampSharedMaterial?.SetColor("_EmissionColor", isTimeToLight ? lampColor : Color.grey);
+        }
+
+        private static bool IsTimeForInsects()
+        {
+            return EnvMan.IsNight();
+        }
+        
+        private static bool IsTimeToLight()
+        {
+            if (!EnvMan.IsDaylight() || !EnvMan.instance)
+                return true;
+            
+            float dayFraction = EnvMan.instance.GetDayFraction();
+
+            if (!(dayFraction <= 0.28f))
+                return dayFraction >= 0.71f;
+
+            return true;
+        }
+
+        internal static void OnGlobalStart()
+        {
+            isTimeForInsects = false;
+            isTimeToLight = true;
+
+            FixPrefab();
+        }
+
+        internal static void OnGlobalDestroy()
+        {
+            lampSharedMaterial = null;
+        }
+
+        private static void FixPrefab()
         {
             if (prefabFixed)
                 return;
@@ -160,11 +231,6 @@ namespace LongshipUpgrades
             prefabInit = true;
             prefab.AddComponent<LongshipCustomizableParts>();
             prefabInit = false;
-        }
-
-        internal static void OnGlobalDestroy()
-        {
-
         }
 
         private static Transform AddCollider(Transform transform, string name, System.Type type)

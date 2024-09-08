@@ -74,7 +74,7 @@ namespace LongshipUpgrades
             [HarmonyPriority(Priority.Last)]
             private static void Postfix()
             {
-                LongshipCustomizableParts.FixCustomizableParts();
+                LongshipCustomizableParts.OnGlobalStart();
             }
         }
 
