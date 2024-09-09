@@ -33,6 +33,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="LongshipCustomizableParts.cs" />
+    <Compile Include="LongshipPartController.cs" />
     <Compile Include="LongshipUpgrades.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

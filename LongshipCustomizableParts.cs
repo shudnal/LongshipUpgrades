@@ -14,7 +14,9 @@ namespace LongshipUpgrades
         private GameObject m_fireWarmth;
         private GameObject m_tent;
         private GameObject m_lantern;
-        
+        private GameObject m_mast;
+        private GameObject m_ropes;
+
         private GameObject[] m_lightParts;
 
         public const string prefabName = "VikingShip";
@@ -24,6 +26,10 @@ namespace LongshipUpgrades
         private static Color lampColor;
         private static bool isTimeForInsects;
         private static bool isTimeToLight = true;
+
+        private static readonly int s_mastUpgraded = "MastUpgraded".GetStableHashCode();
+        private static readonly int s_mastRemoved = "MastRemoved".GetStableHashCode();
+        
 
         private void Awake()
         {
@@ -46,6 +52,10 @@ namespace LongshipUpgrades
                 isTimeToLight = IsTimeToLight();
                 UpdateLights();
             }
+
+            m_mast?.SetActive(m_nview.GetZDO().GetBool(s_mastRemoved));
+            m_ropes?.SetActive(m_mast.activeSelf);
+            m_beamMast?.SetActive(!m_mast.activeSelf);
         }
 
         private void UpdateLights()
@@ -58,7 +68,14 @@ namespace LongshipUpgrades
 
         private void InitializeParts()
         {
-            Transform beam = transform.Find("ship/visual/Customize/ShipTen2_beam");
+            m_mast = transform.Find("ship/visual/Mast").gameObject;
+            m_ropes = transform.Find("ship/visual/ropes").gameObject;
+
+            Transform customize = transform.Find("ship/visual/Customize");
+            if (!customize)
+                return;
+
+            Transform beam = customize.Find("ShipTen2_beam");
             if (beam)
             {
                 Transform beamCollider = AddCollider(beam, "collider", typeof(BoxCollider));
@@ -72,8 +89,12 @@ namespace LongshipUpgrades
                 m_beamMast.SetActive(false);
 
                 beam.localPosition += new Vector3(0.1f, 0f, 0f);
+            }
 
-                m_tent = transform.Find("ship/visual/Customize/ShipTen2 (1)").gameObject;
+            Transform tent = customize.Find("ShipTen2 (1)");
+            if (tent)
+            {
+                m_tent = tent.gameObject;
                 Transform tentColliders = new GameObject("colliders").transform;
                 tentColliders.SetParent(m_tent.transform, false);
 
@@ -91,27 +112,27 @@ namespace LongshipUpgrades
                 tentCollider2.localPosition = new Vector3(-2.1f, 0.7f, -0.55f);
                 tentCollider2.localScale = new Vector3(1.15f, 0.01f, 3f);
                 tentCollider2.localEulerAngles = new Vector3(0f, 0f, 6f);
+            }
 
-                Transform lamp = transform.Find("ship/visual/Customize/TraderLamp");
-                lamp.gameObject.SetActive(false);
-
+            GameObject lanternItem = ObjectDB.instance.GetItemPrefab("Lantern")?.transform.Find("attach/equiped")?.gameObject;
+            if (lanternItem)
+            {
                 m_lantern = new GameObject("Lantern")
                 {
                     layer = 28 // vehicle
                 };
 
                 Transform lanternParent = m_lantern.transform;
-                lanternParent.SetParent(transform.Find("ship/visual/Customize"), false);
+                lanternParent.SetParent(customize, false);
                 lanternParent.localScale = Vector3.one * 0.45f;
 
-                GameObject lanternItem = ObjectDB.instance.GetItemPrefab("Lantern");
-                Transform lantern = Instantiate(lanternItem.transform.Find("attach/equiped").gameObject, lanternParent).transform;
+                Transform lantern = Instantiate(lanternItem, lanternParent).transform;
                 lantern.name = "Lamp";
                 lantern.localPosition = new Vector3(0.23f, 1.9f, 0f);
                 lantern.gameObject.layer = 28; // vehicle
 
                 Light light = lantern.GetComponentInChildren<Light>();
-                light.color = lamp.GetComponentInChildren<Light>().color;
+                light.color = new Color(0.957f, 0.78f, 0.684f, 1f);
 
                 m_lightParts = new GameObject[] { light.gameObject, lantern.Find("flare").gameObject };
 
@@ -135,11 +156,22 @@ namespace LongshipUpgrades
                 lanternCollider.localScale = new Vector3(0.02f, 0.02f, 0.5f);
                 lanternCollider.localEulerAngles = new Vector3(90f, 0f, 0f);
 
-                m_insects = Instantiate(lamp.Find("insects").gameObject, lanternParent);
-                m_insects.name = "insects";
-                m_insects.SetActive(false);
-                m_insects.transform.localPosition = new Vector3(0.42f, 1.85f, 0f);
-                m_insects.layer = 8; // effect
+                Transform lamp = customize.Find("TraderLamp");
+                if (lamp)
+                {
+                    lamp.gameObject.SetActive(false);
+
+                    Transform insects = lamp.Find("insects");
+
+                    if (insects)
+                    {
+                        m_insects = Instantiate(insects.gameObject, lanternParent);
+                        m_insects.name = "insects";
+                        m_insects.SetActive(false);
+                        m_insects.transform.localPosition = new Vector3(0.42f, 1.85f, 0f);
+                        m_insects.layer = 8; // effect
+                    }
+                }
 
                 m_fireWarmth = AddCollider(lanternParent, "FireWarmth", typeof(SphereCollider)).gameObject;
                 m_fireWarmth.layer = 14; // character_trigger
@@ -153,17 +185,33 @@ namespace LongshipUpgrades
                 fireWarmth.m_type = EffectArea.Type.Fire | EffectArea.Type.Heat;
 
                 lantern.gameObject.SetActive(true);
-
-                // TODO interactive
-                // Mast removal (ship/colliders/mast/Cube)
-                // Light
-                // storage
-                // tent
-                // shields
-                // heads
-                // On ship destroy spawn spent mats
             }
 
+            // TODO interactive
+            // Mast removal (ship/colliders/mast/Cube)
+            // Light
+            // storage
+            // tent
+            // shields
+            // heads
+            // On ship destroy spawn spent mats
+
+            GameObject interactables = new GameObject("interactive");
+
+            Transform interactableParent = interactables.transform;
+            interactableParent.SetParent(customize, false);
+
+            // Mast controller
+            if (m_beamMast)
+            {
+                LongshipPartController mastController = transform.Find("ship/colliders/mast/Cube").gameObject.AddComponent<LongshipPartController>();
+                mastController.m_name = "Mast";
+                mastController.m_zdoPartUpgraded = s_mastUpgraded;
+                mastController.m_zdoPartActive = s_mastRemoved;
+                mastController.m_messageAdd = "Put up";
+                mastController.m_messageRemove = "Remove";
+                mastController.m_nview = m_nview;
+            }
         }
 
         private static bool IsTimeForInsects()
