@@ -2,6 +2,8 @@
 using BepInEx.Configuration;
 using HarmonyLib;
 using ServerSync;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace LongshipUpgrades
 {
@@ -85,6 +87,63 @@ namespace LongshipUpgrades
             private static void Postfix()
             {
                 LongshipCustomizableParts.OnGlobalDestroy();
+            }
+        }
+
+        [HarmonyPatch(typeof(Ship))]
+        public static class Ship_OnTrigger_IgnoreFireWarmthCollider
+        {
+            private static readonly Dictionary<Ship, Dictionary<Collider, int>> triggerCounter = new Dictionary<Ship, Dictionary<Collider, int>>();
+            
+            [HarmonyPostfix]
+            [HarmonyPatch(nameof(Ship.OnEnable))]
+            public static void OnEnablePostfix(Ship __instance) => triggerCounter.Add(__instance, new Dictionary<Collider, int>());
+
+            [HarmonyPostfix]
+            [HarmonyPatch(nameof(Ship.OnDisable))]
+            public static void OnDisablePostfix(Ship __instance) => triggerCounter.Remove(__instance);
+
+            [HarmonyPrefix]
+            [HarmonyPatch(nameof(Ship.OnTriggerEnter))]
+            public static bool PrefixEnter(Ship __instance, Collider collider)
+            {
+                if (!collider.GetComponent<Character>())
+                    return true;
+
+                if (!triggerCounter.TryGetValue(__instance, out Dictionary<Collider, int> colliderTriggered))
+                    return true;
+
+                if (!colliderTriggered.TryGetValue(collider, out int counter))
+                {
+                    colliderTriggered[collider] = 1;
+                    return true;
+                }
+
+                colliderTriggered[collider]++;
+                return false;
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(nameof(Ship.OnTriggerExit))]
+            public static bool PrefixExit(Ship __instance, Collider collider)
+            {
+                if (!collider.GetComponent<Character>())
+                    return true;
+
+                if (!triggerCounter.TryGetValue(__instance, out Dictionary<Collider, int> colliderTriggered))
+                    return true;
+
+                if (!colliderTriggered.TryGetValue(collider, out int counter))
+                    return true;
+
+                if (counter == 1)
+                {
+                    colliderTriggered.Remove(collider);
+                    return true;
+                }
+
+                colliderTriggered[collider]--;
+                return false;
             }
         }
     }

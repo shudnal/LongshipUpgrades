@@ -35,6 +35,29 @@ namespace LongshipUpgrades
             if (prefabInit)
                 return;
 
+            InitializeParts();
+        }
+
+        private void FixedUpdate()
+        {
+            if (m_lantern.activeInHierarchy && (isTimeForInsects != IsTimeForInsects() || isTimeToLight != IsTimeToLight()))
+            {
+                isTimeForInsects = IsTimeForInsects();
+                isTimeToLight = IsTimeToLight();
+                UpdateLights();
+            }
+        }
+
+        private void UpdateLights()
+        {
+            m_insects?.SetActive(isTimeForInsects);
+
+            m_lightParts?.Do(part => part?.SetActive(isTimeToLight));
+            lampSharedMaterial?.SetColor("_EmissionColor", isTimeToLight ? lampColor : Color.grey);
+        }
+
+        private void InitializeParts()
+        {
             Transform beam = transform.Find("ship/visual/Customize/ShipTen2_beam");
             if (beam)
             {
@@ -140,24 +163,7 @@ namespace LongshipUpgrades
                 // heads
                 // On ship destroy spawn spent mats
             }
-        }
 
-        private void FixedUpdate()
-        {
-            if (m_lantern.activeInHierarchy && (isTimeForInsects != IsTimeForInsects() || isTimeToLight != IsTimeToLight()))
-            {
-                isTimeForInsects = IsTimeForInsects();
-                isTimeToLight = IsTimeToLight();
-                UpdateLights();
-            }
-        }
-
-        private void UpdateLights()
-        {
-            m_insects?.SetActive(isTimeForInsects);
-
-            m_lightParts?.Do(part => part?.SetActive(isTimeToLight));
-            lampSharedMaterial?.SetColor("_EmissionColor", isTimeToLight ? lampColor : Color.grey);
         }
 
         private static bool IsTimeForInsects()
@@ -212,6 +218,10 @@ namespace LongshipUpgrades
 
             Transform tent = prefab.transform.Find("ship/visual/Customize/ShipTen2 (1)");
             tent.localPosition += new Vector3(0f, 0.08f, 0f);
+
+            Transform colliderOnboard = prefab.transform.Find("OnboardTrigger");
+            colliderOnboard.localScale += new Vector3(0.1f, 2f, 0f);
+            colliderOnboard.localPosition += new Vector3(-0.05f, 1f, 0f);
 
             Material material = tent.GetComponentInChildren<MeshRenderer>().sharedMaterial;
 
