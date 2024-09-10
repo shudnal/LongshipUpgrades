@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -8,32 +9,71 @@ namespace LongshipUpgrades
     {
         public static bool prefabInit = false;
 
+        private Ship m_ship;
         private ZNetView m_nview;
+        private ZDO m_zdo;
+        private Container m_container;
+        private bool m_customMast;
+
         private GameObject m_beamMast;
+        private GameObject m_beamTent;
         private GameObject m_insects;
         private GameObject m_fireWarmth;
         private GameObject m_tent;
         private GameObject m_lantern;
+        private GameObject m_holdersRight;
+        private GameObject m_holdersLeft;
+        private GameObject m_mastUpgrade;
+        private GameObject m_storageUpgrade;
+
         private GameObject m_mast;
         private GameObject m_ropes;
 
+        private MeshRenderer m_lampRenderer;
         private GameObject[] m_lightParts;
+        private GameObject[] m_containerPartsLvl1;
+        private GameObject[] m_containerPartsLvl2;
+        private GameObject[] m_protectiveParts;
+
+        private bool m_containerUpgradedLvl1;
+        private bool m_containerUpgradedLvl2;
+        private bool m_protectionUpgraded;
+        private bool m_isLampLightOn;
 
         public const string prefabName = "VikingShip";
         private static bool prefabFixed = false;
 
         private static Material lampSharedMaterial;
         private static Color lampColor;
-        private static bool isTimeForInsects;
+        private static bool isNightTime;
         private static bool isTimeToLight = true;
 
-        private static readonly int s_mastUpgraded = "MastUpgraded".GetStableHashCode();
-        private static readonly int s_mastRemoved = "MastRemoved".GetStableHashCode();
+        public static readonly int s_mastUpgraded = "MastUpgraded".GetStableHashCode();
+        public static readonly int s_mastRemoved = "MastRemoved".GetStableHashCode();
+        public static readonly int s_lanternUpgraded = "LanternUpgraded".GetStableHashCode();
+        public static readonly int s_lanternAdded = "LanternAdded".GetStableHashCode();
+        public static readonly int s_tentUpgraded = "TentUpgraded".GetStableHashCode();
+        public static readonly int s_tentAdded = "TentAdded".GetStableHashCode();
+        public static readonly int s_lightsOn = "LampLight".GetStableHashCode();
+
+        public static readonly int s_containerUpgradedLvl1 = "ContainerUpgradedLvl1".GetStableHashCode();
+        public static readonly int s_containerUpgradedLvl2 = "ContainerUpgradedLvl2".GetStableHashCode();
         
+        public static readonly int s_protectionUpgraded = "ProtectionUpgraded".GetStableHashCode();
+
+        public static readonly int s_headStyle = "HeadStyle".GetStableHashCode();
+
+        public static readonly MaterialPropertyBlock s_materialBlock = new MaterialPropertyBlock();
 
         private void Awake()
         {
+            m_ship = GetComponent<Ship>();
             m_nview = GetComponent<ZNetView>();
+            m_zdo = m_nview?.GetZDO();
+
+            enabled = m_zdo != null;
+
+            m_container = GetComponentsInChildren<Container>().Where(container => container.gameObject.name == "piece_chest").FirstOrDefault();
         }
 
         private void Start()
@@ -46,24 +86,90 @@ namespace LongshipUpgrades
 
         private void FixedUpdate()
         {
-            if (m_lantern.activeInHierarchy && (isTimeForInsects != IsTimeForInsects() || isTimeToLight != IsTimeToLight()))
+            if (m_zdo == null || !m_ship)
+                return;
+
+            m_customMast = m_zdo.GetBool(s_mastUpgraded);
+
+            m_mast?.SetActive(!m_customMast || !m_zdo.GetBool(s_mastRemoved));
+            m_ropes?.SetActive(m_mast.activeSelf);
+            m_beamMast?.SetActive(!m_mast.activeSelf);
+
+            m_beamTent?.SetActive(m_customMast);
+
+            m_tent?.SetActive(m_customMast && m_zdo.GetBool(s_tentAdded));
+            m_lantern?.SetActive(m_customMast && m_zdo.GetBool(s_lanternAdded));
+
+            m_holdersRight?.SetActive(m_tent && m_tent.activeInHierarchy);
+            m_holdersLeft?.SetActive(m_tent && m_tent.activeInHierarchy);
+
+            m_fireWarmth?.SetActive(m_lantern && m_lantern.activeInHierarchy && m_tent && m_tent.activeInHierarchy);
+
+            bool timeChanged = false;
+            if (m_lantern != null && m_lantern.activeInHierarchy && (m_isLampLightOn != m_zdo.GetBool(s_lightsOn) || (timeChanged = isTimeToLight != IsTimeToLight()) || isNightTime != IsNightTime()))
             {
-                isTimeForInsects = IsTimeForInsects();
+                isNightTime = IsNightTime();
                 isTimeToLight = IsTimeToLight();
+
+                if (timeChanged)
+                    m_zdo.Set(s_lightsOn, isTimeToLight);
+
+                m_isLampLightOn = m_zdo.GetBool(s_lightsOn);
                 UpdateLights();
             }
 
-            m_mast?.SetActive(m_nview.GetZDO().GetBool(s_mastRemoved));
-            m_ropes?.SetActive(m_mast.activeSelf);
-            m_beamMast?.SetActive(!m_mast.activeSelf);
+            if (m_containerUpgradedLvl2 != m_zdo.GetBool(s_containerUpgradedLvl2))
+            {
+                m_containerUpgradedLvl2 = m_zdo.GetBool(s_containerUpgradedLvl2);
+                m_containerPartsLvl2?.Do(part => part?.SetActive(m_containerUpgradedLvl2));
+                
+                if (m_containerUpgradedLvl2 && m_container.m_height < 4)
+                    m_container.m_height = 4;
+
+                if (m_containerUpgradedLvl2 && m_container.GetInventory().GetHeight() < 4)
+                    m_container.GetInventory().m_height = 4;
+            }
+
+            if (m_containerUpgradedLvl1 != m_zdo.GetBool(s_containerUpgradedLvl1))
+            {
+                m_containerUpgradedLvl1 = m_zdo.GetBool(s_containerUpgradedLvl1);
+                m_containerPartsLvl1?.Do(part => part?.SetActive(m_containerUpgradedLvl1));
+
+                if (!m_containerUpgradedLvl2)
+                    m_storageUpgrade.GetComponent<LongshipPartController>().m_zdoPartUpgraded = s_containerUpgradedLvl2;
+
+                if (m_containerUpgradedLvl1 && m_container.m_width < 7)
+                    m_container.m_width = 7;
+
+                if (m_containerUpgradedLvl1 && m_container.GetInventory().GetWidth() < 7)
+                    m_container.GetInventory().m_width = 7;
+            }
+
+            m_storageUpgrade?.SetActive(!m_containerUpgradedLvl2);
+
+            if (m_protectionUpgraded != m_zdo.GetBool(s_protectionUpgraded))
+            {
+                m_protectionUpgraded = m_zdo.GetBool(s_protectionUpgraded);
+                m_protectiveParts?.Do(part => part?.SetActive(m_protectionUpgraded));
+
+                WearNTear component = GetComponent<WearNTear>();
+                if ((bool)component && component.m_health < 1500)
+                    component.m_health = 1500;
+            }
         }
 
         private void UpdateLights()
         {
-            m_insects?.SetActive(isTimeForInsects);
+            m_insects?.SetActive(isNightTime && m_isLampLightOn);
 
-            m_lightParts?.Do(part => part?.SetActive(isTimeToLight));
-            lampSharedMaterial?.SetColor("_EmissionColor", isTimeToLight ? lampColor : Color.grey);
+            m_lightParts?.Do(part => part?.SetActive(m_isLampLightOn));
+
+            if (m_lampRenderer)
+            {
+                m_lampRenderer.GetPropertyBlock(s_materialBlock);
+                s_materialBlock.SetColor("_EmissionColor", m_isLampLightOn ? lampColor : Color.grey);
+                m_lampRenderer.SetPropertyBlock(s_materialBlock);
+            }
         }
 
         private void InitializeParts()
@@ -75,13 +181,42 @@ namespace LongshipUpgrades
             if (!customize)
                 return;
 
+            customize.gameObject.SetActive(true);
+
+            m_holdersRight = customize.Find("ShipTentHolders").gameObject;
+            m_holdersLeft = customize.Find("ShipTentHolders (1)").gameObject;
+
+            m_holdersRight.SetActive(false);
+            m_holdersLeft.SetActive(false);
+
+            Transform storage = customize.Find("storage");
+            if (storage)
+            {
+                List<GameObject> barrels = new List<GameObject>();
+                List<GameObject> boxes = new List<GameObject>();
+                List<GameObject> shields = new List<GameObject>();
+
+                for (int i = 0; i < storage.childCount; i++)
+                {
+                    GameObject go = storage.GetChild(i).gameObject;
+                    if (go.name.StartsWith("barrel"))
+                        barrels.Add(go);
+                    else if (go.name.StartsWith("Shield"))
+                        shields.Add(go);
+                    else
+                        boxes.Add(go);
+
+                    go.SetActive(false);
+                }
+
+                m_containerPartsLvl1 = barrels.ToArray();
+                m_containerPartsLvl2 = boxes.ToArray();
+                m_protectiveParts = shields.ToArray();
+            }
+
             Transform beam = customize.Find("ShipTen2_beam");
             if (beam)
             {
-                Transform beamCollider = AddCollider(beam, "collider", typeof(BoxCollider));
-                beamCollider.localPosition = new Vector3(0f, 1.6f, -0.25f);
-                beamCollider.localScale = new Vector3(0.15f, 0.15f, 3f);
-
                 m_beamMast = Instantiate(beam.gameObject, beam.parent);
                 m_beamMast.name = "ShipTen2_mast";
                 m_beamMast.transform.localEulerAngles += new Vector3(90f, 0.1f, 0f);
@@ -89,6 +224,38 @@ namespace LongshipUpgrades
                 m_beamMast.SetActive(false);
 
                 beam.localPosition += new Vector3(0.1f, 0f, 0f);
+                m_beamTent = beam.gameObject;
+                m_beamTent.SetActive(false);
+
+                Transform mastBeamCollider = AddCollider(m_beamMast.transform, "mast_beam", typeof(BoxCollider));
+                mastBeamCollider.localPosition = new Vector3(0f, 1.58f, -0.48f);
+                mastBeamCollider.localScale = new Vector3(0.16f, 0.16f, 2.5f);
+
+                Transform lanternBeamCollider = AddCollider(beam, "lantern_beam", typeof(BoxCollider));
+                lanternBeamCollider.localPosition = new Vector3(0f, 1.58f, -1.35f);
+                lanternBeamCollider.localScale = new Vector3(0.16f, 0.16f, 0.8f);
+
+                Transform tentBeamCollider = AddCollider(beam, "tent_beam", typeof(BoxCollider));
+                tentBeamCollider.localPosition = new Vector3(0f, 1.58f, 0.2f);
+                tentBeamCollider.localScale = new Vector3(0.16f, 0.16f, 2.1f);
+
+                LongshipPartController lanternController = lanternBeamCollider.gameObject.AddComponent<LongshipPartController>();
+                lanternController.m_name = "Lantern";
+                lanternController.m_zdoPartUpgraded = s_lanternUpgraded;
+                lanternController.m_zdoPartActive = s_lanternAdded;
+                lanternController.m_messageAdd = "Hang";
+                lanternController.m_messageRemove = "Remove";
+                lanternController.m_nview = m_nview;
+                lanternController.m_useDistance = 3f;
+
+                LongshipPartController tentController = tentBeamCollider.gameObject.AddComponent<LongshipPartController>();
+                tentController.m_name = "Tent";
+                tentController.m_zdoPartUpgraded = s_tentUpgraded;
+                tentController.m_zdoPartActive = s_tentAdded;
+                tentController.m_messageAdd = "Place";
+                tentController.m_messageRemove = "Remove";
+                tentController.m_nview = m_nview;
+                tentController.m_useDistance = 3f;
             }
 
             Transform tent = customize.Find("ShipTen2 (1)");
@@ -112,6 +279,8 @@ namespace LongshipUpgrades
                 tentCollider2.localPosition = new Vector3(-2.1f, 0.7f, -0.55f);
                 tentCollider2.localScale = new Vector3(1.15f, 0.01f, 3f);
                 tentCollider2.localEulerAngles = new Vector3(0f, 0f, 6f);
+
+                m_tent.SetActive(false);
             }
 
             GameObject lanternItem = ObjectDB.instance.GetItemPrefab("Lantern")?.transform.Find("attach/equiped")?.gameObject;
@@ -136,15 +305,15 @@ namespace LongshipUpgrades
 
                 m_lightParts = new GameObject[] { light.gameObject, lantern.Find("flare").gameObject };
 
-                MeshRenderer lampRenderer = lantern.Find("default").GetComponent<MeshRenderer>();
+                m_lampRenderer = lantern.Find("default").GetComponent<MeshRenderer>();
 
                 if (lampSharedMaterial == null)
                 {
-                    lampSharedMaterial = new Material(lampRenderer.sharedMaterial);
+                    lampSharedMaterial = new Material(m_lampRenderer.sharedMaterial);
                     lampColor = lampSharedMaterial.GetColor("_EmissionColor");
                 }
 
-                lampRenderer.sharedMaterial = lampSharedMaterial;
+                m_lampRenderer.sharedMaterial = lampSharedMaterial;
 
                 ConfigurableJoint joint = lantern.GetComponent<ConfigurableJoint>();
                 joint.autoConfigureConnectedAnchor = false;
@@ -184,17 +353,17 @@ namespace LongshipUpgrades
                 EffectArea fireWarmth = m_fireWarmth.gameObject.AddComponent<EffectArea>();
                 fireWarmth.m_type = EffectArea.Type.Fire | EffectArea.Type.Heat;
 
-                lantern.gameObject.SetActive(true);
-            }
+                LongshipPartController lampController = lanternParent.gameObject.AddComponent<LongshipPartController>();
+                lampController.m_name = "Lamp";
+                lampController.m_zdoPartActive = s_lightsOn;
+                lampController.m_messageAdd = "Light up";
+                lampController.m_messageRemove = "Put out";
+                lampController.m_nview = m_nview;
+                lampController.m_useDistance = 2f;
 
-            // TODO interactive
-            // Mast removal (ship/colliders/mast/Cube)
-            // Light
-            // storage
-            // tent
-            // shields
-            // heads
-            // On ship destroy spawn spent mats
+                lantern.gameObject.SetActive(true);
+                m_lantern.SetActive(false);
+            }
 
             GameObject interactables = new GameObject("interactive");
 
@@ -204,17 +373,53 @@ namespace LongshipUpgrades
             // Mast controller
             if (m_beamMast)
             {
-                LongshipPartController mastController = transform.Find("ship/colliders/mast/Cube").gameObject.AddComponent<LongshipPartController>();
+                Transform mastControllerCollider = AddCollider(interactableParent, "mast_controller", typeof(BoxCollider));
+                mastControllerCollider.localPosition = new Vector3(-0.05f, 0.08f, 0f);
+                mastControllerCollider.localScale = new Vector3(0.6f, 0.17f, 0.26f);
+
+                m_mastUpgrade = mastControllerCollider.gameObject;
+                m_mastUpgrade.layer = 16; // piece_nonsolid
+                m_mastUpgrade.SetActive(true);
+
+                LongshipPartController mastController = mastControllerCollider.gameObject.AddComponent<LongshipPartController>();
                 mastController.m_name = "Mast";
                 mastController.m_zdoPartUpgraded = s_mastUpgraded;
                 mastController.m_zdoPartActive = s_mastRemoved;
-                mastController.m_messageAdd = "Put up";
-                mastController.m_messageRemove = "Remove";
+                mastController.m_messageAdd = "Remove";
+                mastController.m_messageRemove = "Put up";
                 mastController.m_nview = m_nview;
+                mastController.m_useDistance = 2.5f;
             }
+
+            if (m_container)
+            {
+                Transform storageUpgradeCollider = AddCollider(interactableParent, "storage_controller", typeof(BoxCollider));
+                storageUpgradeCollider.localPosition = new Vector3(-1.9f, -0.04f, 0f);
+                storageUpgradeCollider.localScale = new Vector3(0.45f, 0.45f, 0.18f);
+                storageUpgradeCollider.localEulerAngles = new Vector3(0f, 270f, 0f);
+
+                BoxCollider colliderContainer = m_container.GetComponent<BoxCollider>();
+                BoxCollider colliderUpgrade = storageUpgradeCollider.GetComponent<BoxCollider>();
+
+                colliderUpgrade.center = colliderContainer.center;
+                colliderUpgrade.size = colliderContainer.size;
+
+                LongshipPartController storageController = storageUpgradeCollider.gameObject.AddComponent<LongshipPartController>();
+                storageController.m_name = m_container.m_name.StartsWith("$") ? m_container.m_name : "$msg_cart_storage";
+                storageController.m_zdoPartUpgraded = m_zdo.GetBool(s_containerUpgradedLvl1) ? s_containerUpgradedLvl2 : s_containerUpgradedLvl1;
+                storageController.m_nview = m_nview;
+
+                m_storageUpgrade = storageUpgradeCollider.gameObject;
+                m_storageUpgrade.SetActive(false);
+            }
+
+            // TODO
+            // health
+            // heads
+            // On ship destroy spawn spent mats
         }
 
-        private static bool IsTimeForInsects()
+        private static bool IsNightTime()
         {
             return EnvMan.IsNight();
         }
@@ -234,7 +439,7 @@ namespace LongshipUpgrades
 
         internal static void OnGlobalStart()
         {
-            isTimeForInsects = false;
+            isNightTime = false;
             isTimeToLight = true;
 
             FixPrefab();
@@ -256,7 +461,6 @@ namespace LongshipUpgrades
             if (prefab == null)
                 return;
 
-            prefab.transform.Find("ship/visual/Customize").gameObject.SetActive(true);
             prefab.transform.Find("ship/visual/Customize/storage/default (4)").GetComponent<MeshRenderer>().sharedMaterial.shader =
                 prefab.transform.Find("ship/visual/Customize/TraderLamp/fi_vil_light_lamp01_03").GetComponent<MeshRenderer>().sharedMaterial.shader;
 

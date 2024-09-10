@@ -146,5 +146,118 @@ namespace LongshipUpgrades
                 return false;
             }
         }
+
+        private static bool IsControlledComponent(Component component)
+        {
+            return Utils.GetPrefabName(component.transform.root.gameObject) == LongshipCustomizableParts.prefabName;
+        }
+
+        [HarmonyPatch(typeof(Ship), nameof(Ship.UpdateControlls))]
+        public static class Ship_UpdateControlls_SpeedLimitWithoutMast
+        {
+            public static void Prefix(Ship __instance)
+            {
+                if (!IsControlledComponent(__instance))
+                    return;
+
+                if (__instance.m_nview && __instance.m_nview.IsValid() && (int)__instance.m_speed > 2 && __instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_mastRemoved))
+                    __instance.m_speed = Ship.Speed.Slow;
+            }
+        }
+
+        [HarmonyPatch(typeof(Ship), nameof(Ship.Awake))]
+        public static class Ship_Awake_HealthUpgrades
+        {
+            public static void Postfix(Ship __instance)
+            {
+                if (!IsControlledComponent(__instance))
+                    return;
+
+                if (!__instance || !__instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_protectionUpgraded))
+                    return;
+
+                WearNTear component = __instance.GetComponent<WearNTear>();
+                if ((bool)component && component.m_health < 1500)
+                    component.m_health = 1500;
+            }
+        }
+
+        [HarmonyPatch(typeof(Container), nameof(Container.Awake))]
+        public static class Container_Awake_CargoUpgrades
+        {
+            private static bool CheckAccess(Container container)
+            {
+                return (!container.m_checkGuardStone || PrivateArea.CheckAccess(container.transform.position, 0f, flash: false)) && container.CheckAccess(Game.instance.GetPlayerProfile().GetPlayerID());
+            }
+
+            public static void Prefix(Container __instance)
+            {
+                if (!IsControlledComponent(__instance))
+                    return;
+
+                ZNetView m_nview = (__instance.m_rootObjectOverride ? __instance.m_rootObjectOverride.GetComponent<ZNetView>() : __instance.GetComponent<ZNetView>());
+                if (m_nview == null || !m_nview.IsValid())
+                    return;
+
+                if (m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_containerUpgradedLvl1) && __instance.m_width < 7)
+                    __instance.m_width = 7;
+
+                if (m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_containerUpgradedLvl2) && __instance.m_height < 4)
+                    __instance.m_height = 4;
+            }
+        }
+        
+        [HarmonyPatch(typeof(Ladder))]
+        public static class Ladder_ProtectionUpgrades
+        {
+            [HarmonyPostfix]
+            [HarmonyPriority(Priority.First)]
+            [HarmonyPatch(nameof(Ladder.GetHoverText))]
+            public static void GetHoverTextPostfix(Ladder __instance, ref string __result)
+            {
+                if (!IsControlledComponent(__instance))
+                    return;
+
+                ZNetView m_nview = __instance.GetComponentInParent<ZNetView>();
+
+                if (m_nview == null)
+                    return;
+
+                ZDO zdo = m_nview.GetZDO();
+                if (!zdo.GetBool(LongshipCustomizableParts.s_protectionUpgraded))
+                {
+                    if (!ZInput.IsNonClassicFunctionality() || !ZInput.IsGamepadActive())
+                        __result += Localization.instance.Localize("\n[<color=#ffff00ff><b>$KEY_AltPlace + $KEY_Use</b></color>] $menu_expand");
+                    else
+                        __result += Localization.instance.Localize("\n[<color=#ffff00ff><b>$KEY_JoyAltKeys + $KEY_Use</b></color>] $menu_expand");
+                }
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPriority(Priority.First)]
+            [HarmonyPatch(nameof(Ladder.Interact))]
+            public static bool InteractPrefix(Ladder __instance, Humanoid character, ref bool hold, ref bool alt)
+            {
+                if (!IsControlledComponent(__instance))
+                    return true;
+
+                if (hold || !alt)
+                    return true;
+
+                ZNetView m_nview = __instance.GetComponentInParent<ZNetView>();
+
+                if (m_nview == null)
+                    return true;
+
+                ZDO zdo = m_nview.GetZDO();
+                if (zdo.GetBool(LongshipCustomizableParts.s_protectionUpgraded))
+                    return true;
+
+                zdo.Set(LongshipCustomizableParts.s_protectionUpgraded, true);
+                alt = false;
+                hold = true;
+                return false;
+            }
+        }
     }
 }

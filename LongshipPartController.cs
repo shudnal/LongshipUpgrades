@@ -2,12 +2,12 @@
 
 namespace LongshipUpgrades
 {
-    internal class LongshipPartController : MonoBehaviour, Hoverable, Interactable
+    public class LongshipPartController : MonoBehaviour, Hoverable, Interactable
     {
         public ZNetView m_nview;
         public string m_name = "Part";
 
-        public float m_useDistance = 2f;
+        public float m_useDistance = 0f;
 
         public string m_messageAdd = "Add";
         public string m_messageRemove = "Remove";
@@ -20,16 +20,20 @@ namespace LongshipUpgrades
         public string GetHoverText()
         {
             if (!InUseDistance(Player.m_localPlayer))
-            {
                 return Localization.instance.Localize("<color=#888888>$piece_toofar</color>");
-            }
+
+            if (!PrivateArea.CheckAccess(base.transform.position, 0f, flash: false))
+                return Localization.instance.Localize(m_name + "\n$piece_noaccess");
 
             ZDO zdo = m_nview.GetZDO();
 
-            if (!zdo.GetBool(m_zdoPartUpgraded))
+            if (m_zdoPartUpgraded != 0 && !zdo.GetBool(m_zdoPartUpgraded))
                 return Localization.instance.Localize(m_name + "\n[<color=yellow><b>$KEY_Use</b></color>] $inventory_upgradebutton");
 
-            return Localization.instance.Localize(m_name + "\n[<color=yellow><b>$KEY_Use</b></color>] " + (zdo.GetBool(m_zdoPartActive) ? m_messageRemove : m_messageAdd));
+            if (m_zdoPartActive != 0)
+                return Localization.instance.Localize(m_name + "\n[<color=yellow><b>$KEY_Use</b></color>] " + (zdo.GetBool(m_zdoPartActive) ? m_messageRemove : m_messageAdd));
+
+            return "";
         }
 
         public string GetHoverName()
@@ -40,6 +44,9 @@ namespace LongshipUpgrades
         public bool Interact(Humanoid human, bool hold, bool alt)
         {
             if (hold)
+                return false;
+
+            if (!PrivateArea.CheckAccess(base.transform.position))
                 return false;
 
             if (!InUseDistance(human))
@@ -70,7 +77,7 @@ namespace LongshipUpgrades
 
         public bool InUseDistance(Humanoid human)
         {
-            return Vector3.Distance(human.transform.position, transform.position) < m_useDistance;
+            return m_useDistance == 0f || Vector3.Distance(human.transform.position, transform.position) < m_useDistance;
         }
 
         public static bool RemoveRequiredItems(Player player, Piece.Requirement[] requirements)
