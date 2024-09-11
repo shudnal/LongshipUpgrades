@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static LongshipUpgrades.LongshipUpgrades;
 
 namespace LongshipUpgrades
 {
@@ -28,12 +29,15 @@ namespace LongshipUpgrades
         private GameObject m_storageUpgrade;
         private GameObject m_healthUpgrade;
         private GameObject m_shieldsStyles;
+        private GameObject m_headStyles;
 
         private GameObject m_mast;
         private GameObject m_ropes;
 
         private MeshRenderer m_lampRenderer;
-        private GameObject[] m_lightParts;
+        private Light m_light;
+        private ParticleSystem m_flare;
+
         private GameObject[] m_containerPartsLvl1;
         private GameObject[] m_containerPartsLvl2;
         private GameObject[] m_protectiveParts;
@@ -43,7 +47,7 @@ namespace LongshipUpgrades
         private bool m_containerUpgradedLvl2;
         private bool m_healthUpgraded;
         private bool m_ashlandsUpgraded;
-        private bool m_isLampLightOn;
+        private bool m_isLampLightDisabled;
         private int m_headStyle;
         private int m_shieldsStyle;
         private int m_tentStyle;
@@ -52,17 +56,17 @@ namespace LongshipUpgrades
         private static bool prefabFixed = false;
 
         private static Material lampSharedMaterial;
-        private static Color lampColor;
+        private static Color flareColor;
         private static bool isNightTime;
         private static bool isTimeToLight = true;
 
         public static readonly int s_mastUpgraded = "MastUpgraded".GetStableHashCode();
         public static readonly int s_mastRemoved = "MastRemoved".GetStableHashCode();
         public static readonly int s_lanternUpgraded = "LanternUpgraded".GetStableHashCode();
-        public static readonly int s_lanternAdded = "LanternAdded".GetStableHashCode();
+        public static readonly int s_lanternDisabled = "LanternDisabled".GetStableHashCode();
         public static readonly int s_tentUpgraded = "TentUpgraded".GetStableHashCode();
-        public static readonly int s_tentAdded = "TentAdded".GetStableHashCode();
-        public static readonly int s_lightsOn = "LampLight".GetStableHashCode();
+        public static readonly int s_tentDisabled = "TentDisabled".GetStableHashCode();
+        public static readonly int s_lightsDisabled = "LightDisabled".GetStableHashCode();
 
         public static readonly int s_containerUpgradedLvl1 = "ContainerUpgradedLvl1".GetStableHashCode();
         public static readonly int s_containerUpgradedLvl2 = "ContainerUpgradedLvl2".GetStableHashCode();
@@ -112,109 +116,113 @@ namespace LongshipUpgrades
             if (m_zdo == null || !m_ship)
                 return;
 
-            m_customMast = m_zdo.GetBool(s_mastUpgraded);
+            m_customMast = mastEnabled.Value && m_zdo.GetBool(s_mastUpgraded);
+            m_mastUpgrade?.SetActive((mastEnabled.Value && !m_customMast) || mastRemovable.Value);
 
-            m_mast?.SetActive(!m_customMast || !m_zdo.GetBool(s_mastRemoved));
+            m_mast?.SetActive(!m_zdo.GetBool(s_mastRemoved));
             m_ropes?.SetActive(m_mast.activeSelf);
-            m_beamMast?.SetActive(!m_mast.activeSelf);
 
-            m_beamTent?.SetActive(m_customMast);
+            m_beamTent?.SetActive(m_customMast && (lanternEnabled.Value || tentEnabled.Value));
+            m_beamMast?.SetActive(!m_mast.activeSelf && m_beamTent != null && m_beamTent.activeInHierarchy);
 
-            m_tent?.SetActive(m_customMast && m_zdo.GetBool(s_tentAdded));
-            m_lantern?.SetActive(m_customMast && m_zdo.GetBool(s_lanternAdded));
+            m_tent?.SetActive(m_customMast && tentEnabled.Value && m_zdo.GetBool(s_tentUpgraded) && !m_zdo.GetBool(s_tentDisabled));
+            m_lantern?.SetActive(lanternEnabled.Value && m_customMast && m_zdo.GetBool(s_lanternUpgraded) && !m_zdo.GetBool(s_lanternDisabled));
 
             m_holdersRight?.SetActive(m_tent && m_tent.activeInHierarchy);
             m_holdersLeft?.SetActive(m_tent && m_tent.activeInHierarchy);
 
-            m_fireWarmth?.SetActive(m_lantern && m_lantern.activeInHierarchy && m_tent && m_tent.activeInHierarchy);
+            m_fireWarmth?.SetActive(tentHeat.Value && m_lantern && m_lantern.activeInHierarchy && m_tent && m_tent.activeInHierarchy);
 
             bool timeChanged = false;
-            if (m_lantern && m_lightParts != null && m_lantern.activeInHierarchy && (m_isLampLightOn != m_zdo.GetBool(s_lightsOn) || (timeChanged = isTimeToLight != IsTimeToLight()) || isNightTime != IsNightTime()))
-            {
+            if (m_light != null && m_lantern && m_lantern.activeInHierarchy && (m_isLampLightDisabled != m_zdo.GetBool(s_lightsDisabled) || (timeChanged = isTimeToLight != IsTimeToLight()) || isNightTime != IsNightTime()))
+            {         
                 isNightTime = IsNightTime();
                 isTimeToLight = IsTimeToLight();
 
-                if (timeChanged)
-                    m_zdo.Set(s_lightsOn, isTimeToLight);
+                if (lanternAutoSwtich.Value && timeChanged)
+                    m_zdo.Set(s_lightsDisabled, !isTimeToLight);
 
-                m_isLampLightOn = m_zdo.GetBool(s_lightsOn);
+                m_isLampLightDisabled = m_zdo.GetBool(s_lightsDisabled);
                 UpdateLights();
             }
 
-            if (m_storageUpgrade && m_containerUpgradedLvl2 != m_zdo.GetBool(s_containerUpgradedLvl2))
+            if (containerEnabled.Value && m_storageUpgrade && m_containerUpgradedLvl2 != m_zdo.GetBool(s_containerUpgradedLvl2))
             {
                 m_containerUpgradedLvl2 = m_zdo.GetBool(s_containerUpgradedLvl2);
                 m_containerPartsLvl2?.Do(part => part?.SetActive(m_containerUpgradedLvl2));
                 
-                if (m_containerUpgradedLvl2 && m_container.m_height < 4)
-                    m_container.m_height = 4;
+                if (m_containerUpgradedLvl2 && m_container.m_height < containerHeight.Value)
+                    m_container.m_height = containerHeight.Value;
 
-                if (m_containerUpgradedLvl2 && m_container.GetInventory().GetHeight() < 4)
-                    m_container.GetInventory().m_height = 4;
+                if (m_containerUpgradedLvl2 && m_container.GetInventory().GetHeight() < containerHeight.Value)
+                    m_container.GetInventory().m_height = containerHeight.Value;
             }
 
-            if (m_storageUpgrade && m_containerUpgradedLvl1 != m_zdo.GetBool(s_containerUpgradedLvl1))
+            if (containerEnabled.Value && m_storageUpgrade && m_containerUpgradedLvl1 != m_zdo.GetBool(s_containerUpgradedLvl1))
             {
                 m_containerUpgradedLvl1 = m_zdo.GetBool(s_containerUpgradedLvl1);
                 m_containerPartsLvl1?.Do(part => part?.SetActive(m_containerUpgradedLvl1));
 
-                if (m_containerUpgradedLvl1 && m_container.m_width < 7)
-                    m_container.m_width = 7;
+                if (m_containerUpgradedLvl1 && m_container.m_width < containerWidth.Value)
+                    m_container.m_width = containerWidth.Value;
 
-                if (m_containerUpgradedLvl1 && m_container.GetInventory().GetWidth() < 7)
-                    m_container.GetInventory().m_width = 7;
+                if (m_containerUpgradedLvl1 && m_container.GetInventory().GetWidth() < containerWidth.Value)
+                    m_container.GetInventory().m_width = containerWidth.Value;
             }
 
-            m_storageUpgrade?.SetActive(!m_containerUpgradedLvl2);
+            m_storageUpgrade?.SetActive(containerEnabled.Value && !m_containerUpgradedLvl2);
 
-            if (m_protectiveParts != null && m_wnt && m_healthUpgraded != m_zdo.GetBool(s_healthUpgraded))
+            if (healthEnabled.Value && m_protectiveParts != null && m_wnt && m_healthUpgraded != m_zdo.GetBool(s_healthUpgraded))
             {
                 m_healthUpgraded = m_zdo.GetBool(s_healthUpgraded);
                 m_protectiveParts.Do(part => part?.SetActive(m_healthUpgraded));
 
-                if (m_healthUpgraded && m_wnt.m_health < 1500)
-                    m_wnt.m_health = 1500;
+                if (m_healthUpgraded && m_wnt.m_health < healthUpgradeLvl1.Value)
+                    m_wnt.m_health = healthUpgradeLvl1.Value;
             }
 
-            m_shieldsStyles?.SetActive(m_healthUpgraded);
-
-            if (m_protectiveParts != null && m_wnt && m_ashlandsUpgraded != m_zdo.GetBool(s_ashlandsUpgraded))
+            if (healthEnabled.Value && m_protectiveParts != null && m_wnt && m_ashlandsUpgraded != m_zdo.GetBool(s_ashlandsUpgraded))
             {
                 m_ashlandsUpgraded = m_zdo.GetBool(s_ashlandsUpgraded);
 
                 if (m_ashlandsUpgraded)
                 {
-                    if (m_wnt.m_health < 2000)
-                        m_wnt.m_health = 2000;
+                    if (m_wnt.m_health < healthUpgradeLvl2.Value)
+                        m_wnt.m_health = healthUpgradeLvl2.Value;
 
-                    m_ship.m_ashlandsReady = true;
+                    if (ashlandsProtection.Value)
+                    {
+                        m_ship.m_ashlandsReady = true;
 
-                    m_wnt.m_ashDamageResist = true;
-                    m_wnt.m_damages.Apply(new List<HitData.DamageModPair> { new HitData.DamageModPair() { m_type = HitData.DamageType.Fire, m_modifier = HitData.DamageModifier.VeryResistant } });
+                        m_wnt.m_ashDamageResist = true;
+                        m_wnt.m_damages.Apply(new List<HitData.DamageModPair> { new HitData.DamageModPair() { m_type = HitData.DamageType.Fire, m_modifier = HitData.DamageModifier.VeryResistant } });
 
-                    foreach (MeshRenderer renderer in new List<MeshRenderer> {
+                        foreach (MeshRenderer renderer in new List<MeshRenderer> {
                                                             m_wnt.m_new.transform.Find("hull").gameObject.GetComponent<MeshRenderer>(),
                                                             m_wnt.m_worn.transform.Find("hull").gameObject.GetComponent<MeshRenderer>(),
                                                             m_wnt.m_new.transform.Find("skull_head").gameObject.GetComponent<MeshRenderer>(),
                                                             m_wnt.m_worn.transform.Find("skull_head").gameObject.GetComponent<MeshRenderer>()}
-                                                            .Union(m_heads.Select(head => head.GetComponent<MeshRenderer>())))
-                    {
-                        renderer.GetPropertyBlock(s_materialBlock);
-                        s_materialBlock.SetTexture("_MainTex", s_ashlandsHull);
-                        renderer.SetPropertyBlock(s_materialBlock);
+                                                                .Union(m_heads.Select(head => head.GetComponent<MeshRenderer>())))
+                        {
+                            renderer.GetPropertyBlock(s_materialBlock);
+                            s_materialBlock.SetTexture("_MainTex", s_ashlandsHull);
+                            renderer.SetPropertyBlock(s_materialBlock);
+                        }
                     }
                 }
             }
 
-            if (m_protectiveParts != null && m_healthUpgraded && m_shieldsStyle != m_zdo.GetInt(s_shieldsStyle))
+            m_healthUpgrade?.SetActive(healthEnabled.Value && !m_ashlandsUpgraded);
+
+            if (changeShields.Value && healthEnabled.Value && m_protectiveParts != null && m_healthUpgraded && m_shieldsStyle != m_zdo.GetInt(s_shieldsStyle))
             {
                 m_shieldsStyle = m_zdo.GetInt(s_shieldsStyle);
                 m_protectiveParts.Do(part => part.GetComponent<ItemStyle>().Setup(m_shieldsStyle));
             }
 
-            m_healthUpgrade?.SetActive(!m_ashlandsUpgraded);
+            m_shieldsStyles?.SetActive(m_healthUpgraded);
 
-            if (m_tent != null && m_tent.activeInHierarchy && m_tentStyle != m_zdo.GetInt(s_tentStyle))
+            if (changeTent.Value && m_tent != null && m_tent.activeInHierarchy && m_tentStyle != m_zdo.GetInt(s_tentStyle))
             {
                 m_tentStyle = m_zdo.GetInt(s_tentStyle);
 
@@ -234,30 +242,43 @@ namespace LongshipUpgrades
                 }
             }
 
-            if (m_heads != null && m_wnt && m_headStyle != m_zdo.GetInt(s_headStyle))
+            if (changeHead.Value && m_heads != null && m_wnt && m_headStyle != m_zdo.GetInt(s_headStyle))
             {
                 m_headStyle = m_zdo.GetInt(s_headStyle);
 
                 for (int i = 0; i < m_heads.Length; i++)
                     m_heads[i].SetActive(m_headStyle == i + 1);
 
-                foreach (GameObject head in new GameObject[] {
-                                                            m_wnt.m_new.transform.Find("skull_head").gameObject,
-                                                            m_wnt.m_worn.transform.Find("skull_head").gameObject })
+                foreach (GameObject head in new GameObject[] { m_wnt.m_new.transform.Find("skull_head").gameObject,
+                                                               m_wnt.m_worn.transform.Find("skull_head").gameObject })
                     head.SetActive(m_headStyle == 0);
             }
+
+            m_headStyles?.SetActive(changeHead.Value);
         }
 
         private void UpdateLights()
         {
-            m_insects?.SetActive(isNightTime && m_isLampLightOn);
+            m_insects?.SetActive(isNightTime && !m_isLampLightDisabled);
 
-            m_lightParts?.Do(part => part?.SetActive(m_isLampLightOn));
+            m_light.gameObject.SetActive(!m_isLampLightDisabled);
+            m_light.color = lanternLightColor.Value;
+
+            Color onlyColor = lanternLightColor.Value;
+            onlyColor.a = 0f;
+
+            if (m_flare)
+            {
+                m_flare.gameObject.SetActive(!m_isLampLightDisabled);
+
+                ParticleSystem.MainModule main = m_flare.main;
+                main.startColor = Color.Lerp(flareColor, onlyColor, 0.5f);
+            }
 
             if (m_lampRenderer)
             {
                 m_lampRenderer.GetPropertyBlock(s_materialBlock);
-                s_materialBlock.SetColor("_EmissionColor", m_isLampLightOn ? lampColor : Color.grey);
+                s_materialBlock.SetColor("_EmissionColor", m_isLampLightDisabled ? Color.grey : Color.white + onlyColor);
                 m_lampRenderer.SetPropertyBlock(s_materialBlock);
             }
         }
@@ -330,23 +351,31 @@ namespace LongshipUpgrades
                 tentBeamCollider.localPosition = new Vector3(0f, 1.58f, 0.2f);
                 tentBeamCollider.localScale = new Vector3(0.16f, 0.16f, 2.1f);
 
-                LongshipPartController lanternController = lanternBeamCollider.gameObject.AddComponent<LongshipPartController>();
-                lanternController.m_name = "Lantern";
-                lanternController.m_zdoPartUpgraded = s_lanternUpgraded;
-                lanternController.m_zdoPartActive = s_lanternAdded;
-                lanternController.m_messageAdd = "Hang";
-                lanternController.m_messageRemove = "Remove";
-                lanternController.m_nview = m_nview;
-                lanternController.m_useDistance = 3f;
+                if (lanternEnabled.Value)
+                {
+                    LongshipPartController lanternController = lanternBeamCollider.gameObject.AddComponent<LongshipPartController>();
+                    lanternController.m_name = "Lantern";
+                    lanternController.m_zdoPartUpgraded = s_lanternUpgraded;
+                    lanternController.m_messageUpgrade = "Adds a lantern providing light at deck";
+                    lanternController.m_zdoPartDisabled = lanternRemovable.Value ? s_lanternDisabled : 0;
+                    lanternController.m_messageEnable = "Hang";
+                    lanternController.m_messageDisable = "Remove";
+                    lanternController.m_nview = m_nview;
+                    lanternController.m_useDistance = 3f;
+                }
 
-                LongshipPartController tentController = tentBeamCollider.gameObject.AddComponent<LongshipPartController>();
-                tentController.m_name = "Tent";
-                tentController.m_zdoPartUpgraded = s_tentUpgraded;
-                tentController.m_zdoPartActive = s_tentAdded;
-                tentController.m_messageAdd = "Place";
-                tentController.m_messageRemove = "Remove";
-                tentController.m_nview = m_nview;
-                tentController.m_useDistance = 3f;
+                if (tentEnabled.Value)
+                {
+                    LongshipPartController tentController = tentBeamCollider.gameObject.AddComponent<LongshipPartController>();
+                    tentController.m_name = "Tent";
+                    tentController.m_zdoPartUpgraded = s_tentUpgraded;
+                    tentController.m_messageUpgrade = "Adds an awning to protect from the elements";
+                    tentController.m_zdoPartDisabled = tentRemovable.Value ? s_tentDisabled : 0;
+                    tentController.m_messageEnable = "Place";
+                    tentController.m_messageDisable = "Remove";
+                    tentController.m_nview = m_nview;
+                    tentController.m_useDistance = 3f;
+                }
             }
 
             Transform tent = customize.Find("ShipTen2 (1)");
@@ -373,14 +402,16 @@ namespace LongshipUpgrades
 
                 m_tent.SetActive(false);
 
-                for (int i = 0; i < tentColliders.childCount; i++)
-                {
-                    LongshipPartController tentController = tentColliders.GetChild(i).gameObject.AddComponent<LongshipPartController>();
-                    tentController.m_name = "Tent";
-                    tentController.m_nview = m_nview;
-                    tentController.m_zdoPartVariant = s_tentStyle;
-                    tentController.m_variants = 3;
-                }
+                if (changeTent.Value)
+                    for (int i = 0; i < tentColliders.childCount; i++)
+                    {
+                        LongshipPartController tentController = tentColliders.GetChild(i).gameObject.AddComponent<LongshipPartController>();
+                        tentController.m_name = "Tent";
+                        tentController.m_nview = m_nview;
+                        tentController.m_messageSwitch = "Switch";
+                        tentController.m_zdoPartVariant = s_tentStyle;
+                        tentController.m_variants = 3;
+                    }
             }
 
             GameObject lanternItem = ObjectDB.instance.GetItemPrefab("Lantern")?.transform.Find("attach/equiped")?.gameObject;
@@ -400,18 +431,18 @@ namespace LongshipUpgrades
                 lantern.localPosition = new Vector3(0.23f, 1.9f, 0f);
                 lantern.gameObject.layer = 28; // vehicle
 
-                Light light = lantern.GetComponentInChildren<Light>();
-                light.color = new Color(0.957f, 0.78f, 0.684f, 1f);
+                m_light = lantern.GetComponentInChildren<Light>();
+                m_light.color = lanternLightColor.Value;
 
-                m_lightParts = new GameObject[] { light.gameObject, lantern.Find("flare").gameObject };
+                m_flare = lantern.Find("flare").GetComponent<ParticleSystem>();
+                
+                if (flareColor == Color.clear)
+                    flareColor = m_flare.main.startColor.color;
 
                 m_lampRenderer = lantern.Find("default").GetComponent<MeshRenderer>();
 
                 if (lampSharedMaterial == null)
-                {
                     lampSharedMaterial = new Material(m_lampRenderer.sharedMaterial);
-                    lampColor = lampSharedMaterial.GetColor("_EmissionColor");
-                }
 
                 m_lampRenderer.sharedMaterial = lampSharedMaterial;
 
@@ -453,13 +484,16 @@ namespace LongshipUpgrades
                 EffectArea fireWarmth = m_fireWarmth.gameObject.AddComponent<EffectArea>();
                 fireWarmth.m_type = EffectArea.Type.Fire | EffectArea.Type.Heat;
 
-                LongshipPartController lampController = lanternParent.gameObject.AddComponent<LongshipPartController>();
-                lampController.m_name = "Lamp";
-                lampController.m_zdoPartActive = s_lightsOn;
-                lampController.m_messageAdd = "Light up";
-                lampController.m_messageRemove = "Put out";
-                lampController.m_nview = m_nview;
-                lampController.m_useDistance = 2f;
+                if (lanternSwitchable.Value)
+                {
+                    LongshipPartController lampController = lanternParent.gameObject.AddComponent<LongshipPartController>();
+                    lampController.m_name = "Lamp";
+                    lampController.m_zdoPartDisabled = s_lightsDisabled;
+                    lampController.m_messageEnable = "Light up";
+                    lampController.m_messageDisable = "Put out";
+                    lampController.m_nview = m_nview;
+                    lampController.m_useDistance = 2f;
+                }
 
                 lantern.gameObject.SetActive(true);
                 m_lantern.SetActive(false);
@@ -471,7 +505,7 @@ namespace LongshipUpgrades
             interactableParent.SetParent(customize, worldPositionStays: false);
 
             // Mast controller
-            if (m_beamMast)
+            if (mastEnabled.Value || mastRemovable.Value)
             {
                 Transform mastControllerCollider = AddCollider(interactableParent, "mast_controller", typeof(BoxCollider));
                 mastControllerCollider.localPosition = new Vector3(-0.05f, 0.08f, 0f);
@@ -483,10 +517,11 @@ namespace LongshipUpgrades
 
                 LongshipPartController mastController = mastControllerCollider.gameObject.AddComponent<LongshipPartController>();
                 mastController.m_name = "Mast";
-                mastController.m_zdoPartUpgraded = s_mastUpgraded;
-                mastController.m_zdoPartActive = s_mastRemoved;
-                mastController.m_messageAdd = "Remove";
-                mastController.m_messageRemove = "Put up";
+                mastController.m_zdoPartUpgraded = mastEnabled.Value ? s_mastUpgraded : 0;
+                mastController.m_messageUpgrade = "Adds a beam for lantern and tent placing\nMakes the mast removable";
+                mastController.m_zdoPartDisabled = mastRemovable.Value ? s_mastRemoved : 0;
+                mastController.m_messageEnable = "Put up";
+                mastController.m_messageDisable = "Remove";
                 mastController.m_nview = m_nview;
                 mastController.m_useDistance = 2.5f;
             }
@@ -508,7 +543,9 @@ namespace LongshipUpgrades
                 LongshipPartController storageController = storageUpgradeCollider.gameObject.AddComponent<LongshipPartController>();
                 storageController.m_name = m_container.m_name.StartsWith("$") ? m_container.m_name : "$msg_cart_storage";
                 storageController.m_zdoPartUpgraded = s_containerUpgradedLvl1;
+                storageController.m_messageUpgrade = "Expands storage width";
                 storageController.m_zdoPartUpgradedLvl2 = s_containerUpgradedLvl2;
+                storageController.m_messageUpgradeLvl2 = "Expands storage height";
                 storageController.m_nview = m_nview;
 
                 m_storageUpgrade = storageUpgradeCollider.gameObject;
@@ -542,12 +579,16 @@ namespace LongshipUpgrades
                     healthUpgradeCollider.transform.localPosition += new Vector3(0f, 0f, offset);
 
                     LongshipPartController healthController = healthUpgradeCollider.gameObject.AddComponent<LongshipPartController>();
+                    healthController.m_nview = m_nview;
                     healthController.m_name = "Hull";
                     healthController.m_zdoPartUpgraded = s_healthUpgraded;
-                    healthController.m_zdoPartUpgradedLvl2 = s_ashlandsUpgraded;
-                    healthController.m_nview = m_nview;
-                    healthController.m_zdoPartVariant = s_shieldsStyle;
-                    healthController.m_variants = 4;
+                    healthController.m_messageUpgrade = "Adds shields for extra protection";
+
+                    if (ashlandsProtection.Value)
+                    {
+                        healthController.m_zdoPartUpgradedLvl2 = s_ashlandsUpgraded;
+                        healthController.m_messageUpgradeLvl2 = "Adds protection from Ashlands ocean";
+                    }
 
                     healthUpgradeCollider.gameObject.SetActive(true);
                     healthUpgradeCollider.gameObject.layer = 16; // piece_nonsolid
@@ -592,14 +633,16 @@ namespace LongshipUpgrades
                 storageUpgradeCollider5.localScale = new Vector3(1.4f, 0.45f, 0.05f);
                 storageUpgradeCollider5.localEulerAngles = new Vector3(0, 352f, 0f);
 
-                for (int i = 0; i < shieldsParent.childCount; i++)
-                {
-                    LongshipPartController shieldController = shieldsParent.GetChild(i).gameObject.AddComponent<LongshipPartController>();
-                    shieldController.m_name = "Shields";
-                    shieldController.m_nview = m_nview;
-                    shieldController.m_zdoPartVariant = s_shieldsStyle;
-                    shieldController.m_variants = 4;
-                }
+                if (changeShields.Value)
+                    for (int i = 0; i < shieldsParent.childCount; i++)
+                    {
+                        LongshipPartController shieldController = shieldsParent.GetChild(i).gameObject.AddComponent<LongshipPartController>();
+                        shieldController.m_name = "Shields";
+                        shieldController.m_nview = m_nview;
+                        shieldController.m_messageSwitch = "Switch";
+                        shieldController.m_zdoPartVariant = s_shieldsStyle;
+                        shieldController.m_variants = 4;
+                    }
             }
 
             // Heads
@@ -656,16 +699,21 @@ namespace LongshipUpgrades
                 headsControllerCollider.localScale = new Vector3(0.04f, 0.35f, 0.60f);
                 headsControllerCollider.localEulerAngles = new Vector3(0f, 0f, 63f);
 
-                headsControllerCollider.gameObject.layer = 16; // piece_nonsolid
-                headsControllerCollider.gameObject.SetActive(true);
+                m_headStyles = headsControllerCollider.gameObject;
+                m_headStyles.layer = 16; // piece_nonsolid
+                m_headStyles.SetActive(true);
 
                 LongshipPartController headsController = headsControllerCollider.gameObject.AddComponent<LongshipPartController>();
                 headsController.m_name = "Head";
                 headsController.m_nview = m_nview;
+                headsController.m_messageSwitch = "Switch";
                 headsController.m_zdoPartVariant = s_headStyle;
                 headsController.m_variants = 4;
             }
+
             // TODO
+            // Localization
+            // recipes
             // upgrade delay
             // upgrade cost
             // upgrade return

@@ -12,13 +12,15 @@ namespace LongshipUpgrades
         public bool m_checkGuardStone = true;
         public float m_useDistance = 0f;
 
-        public string m_messageAdd = "Add";
-        public string m_messageChange = "Change";
-        public string m_messageRemove = "Remove";
+        public string m_messageEnable = "Add";
+        public string m_messageSwitch = "Switch";
+        public string m_messageDisable = "Remove";
+        public string m_messageUpgrade = "";
+        public string m_messageUpgradeLvl2 = "";
 
         public int m_zdoPartUpgraded;
         public int m_zdoPartUpgradedLvl2;
-        public int m_zdoPartActive;
+        public int m_zdoPartDisabled;
         public int m_zdoPartVariant;
 
         public int m_variants;
@@ -26,7 +28,7 @@ namespace LongshipUpgrades
         public Piece.Requirement[] m_requirements = new Piece.Requirement[0];
         public Piece.Requirement[] m_requirementsLvl2 = new Piece.Requirement[0];
 
-        private static readonly StringBuilder sb = new StringBuilder(10);
+        private static readonly StringBuilder sb = new StringBuilder(12);
         private static Recipe tempRecipe;
 
         public void Awake()
@@ -38,6 +40,12 @@ namespace LongshipUpgrades
             }
         }
 
+        public void Start()
+        {
+            if (m_nview == null)
+                m_nview = GetComponent<ZNetView>();
+        }
+
         public string GetHoverText()
         {
             if (!InUseDistance(Player.m_localPlayer))
@@ -46,13 +54,37 @@ namespace LongshipUpgrades
             if (m_checkGuardStone && !PrivateArea.CheckAccess(base.transform.position, 0f, flash: false))
                 return Localization.instance.Localize(m_name + "\n$piece_noaccess");
 
+            if (!m_nview || !m_nview.IsValid())
+                return "";
+
             ZDO zdo = m_nview.GetZDO();
+
+            if (m_zdoPartUpgraded != 0 && !zdo.GetBool(m_zdoPartUpgraded))
+            {
+                sb.Clear();
+                sb.Append(m_name);
+                sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] $inventory_upgradebutton");
+
+                if (!string.IsNullOrWhiteSpace(m_messageUpgrade))
+                    sb.AppendFormat("\n<color=#{0}>{1}</color>", ColorUtility.ToHtmlStringRGBA(LongshipUpgrades.hintColor.Value), m_messageUpgrade);
+
+                if (m_requirements.Length > 0)
+                {
+                    sb.Append("\n");
+                    sb.Append("\n$hud_require");
+                    m_requirements.Do(req => sb.AppendFormat("\n{0}", req.m_resItem?.m_itemData.m_shared.m_name));
+                }
+                return Localization.instance.Localize(sb.ToString());
+            }
 
             if (m_zdoPartUpgradedLvl2 != 0 && !zdo.GetBool(m_zdoPartUpgradedLvl2))
             {
                 sb.Clear();
                 sb.Append(m_name);
                 sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] $inventory_upgradebutton");
+
+                if (!string.IsNullOrWhiteSpace(m_messageUpgradeLvl2))
+                    sb.AppendFormat("\n<color=#{0}>{1}</color>", ColorUtility.ToHtmlStringRGBA(LongshipUpgrades.hintColor.Value), m_messageUpgradeLvl2);
 
                 if (m_requirementsLvl2.Length > 0)
                 {
@@ -64,35 +96,21 @@ namespace LongshipUpgrades
                 return Localization.instance.Localize(sb.ToString());
             }
 
-            if (m_zdoPartUpgraded != 0 && !zdo.GetBool(m_zdoPartUpgraded))
-            {
-                sb.Clear();
-                sb.Append(m_name);
-                sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] $inventory_upgradebutton");
-
-                if (m_requirements.Length > 0)
-                {
-                    sb.Append("\n");
-                    sb.Append("\n$hud_require");
-                    m_requirements.Do(req => sb.AppendFormat("\n{0}", req.m_resItem?.m_itemData.m_shared.m_name));
-                }
-                return Localization.instance.Localize(sb.ToString());
-            }
-
             if (m_zdoPartVariant != 0 && m_variants > 0)
             {
                 sb.Clear();
                 sb.Append(m_name);
-                sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] $hud_switchitem");
+                sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] ");
+                sb.Append(m_messageSwitch);
                 return Localization.instance.Localize(sb.ToString());
             }
 
-            if (m_zdoPartActive != 0)
+            if (m_zdoPartDisabled != 0)
             {
                 sb.Clear();
                 sb.Append(m_name);
                 sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] ");
-                sb.Append(zdo.GetBool(m_zdoPartActive) ? m_messageRemove : m_messageAdd);
+                sb.Append(zdo.GetBool(m_zdoPartDisabled) ? m_messageEnable : m_messageDisable);
                 return Localization.instance.Localize(sb.ToString());
             }
 
@@ -113,6 +131,9 @@ namespace LongshipUpgrades
                 return false;
 
             if (!InUseDistance(human))
+                return false;
+
+            if (!m_nview || !m_nview.IsValid())
                 return false;
 
             ZDO zdo = m_nview.GetZDO();
@@ -140,10 +161,10 @@ namespace LongshipUpgrades
                 return true;
             }
 
-            if (m_zdoPartActive == 0)
+            if (m_zdoPartDisabled == 0)
                 return false;
 
-            zdo.Set(m_zdoPartActive, !zdo.GetBool(m_zdoPartActive));
+            zdo.Set(m_zdoPartDisabled, !zdo.GetBool(m_zdoPartDisabled));
             return true;
         }
 

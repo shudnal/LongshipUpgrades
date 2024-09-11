@@ -23,9 +23,35 @@ namespace LongshipUpgrades
 
         internal static LongshipUpgrades instance;
 
-        internal static ConfigEntry<bool> modEnabled;
         internal static ConfigEntry<bool> configLocked;
         internal static ConfigEntry<bool> loggingEnabled;
+        internal static ConfigEntry<Color> hintColor;
+
+        internal static ConfigEntry<bool> containerEnabled;
+        internal static ConfigEntry<int> containerHeight;
+        internal static ConfigEntry<int> containerWidth;
+
+        internal static ConfigEntry<bool> healthEnabled;
+        internal static ConfigEntry<int> healthUpgradeLvl1;
+        internal static ConfigEntry<int> healthUpgradeLvl2;
+        internal static ConfigEntry<bool> ashlandsProtection;
+
+        internal static ConfigEntry<bool> lanternEnabled;
+        internal static ConfigEntry<bool> lanternRemovable;
+        internal static ConfigEntry<bool> lanternAutoSwtich;
+        internal static ConfigEntry<bool> lanternSwitchable;
+        internal static ConfigEntry<Color> lanternLightColor;
+
+        internal static ConfigEntry<bool> mastEnabled;
+        internal static ConfigEntry<bool> mastRemovable;
+
+        internal static ConfigEntry<bool> tentEnabled;
+        internal static ConfigEntry<bool> tentHeat;
+        internal static ConfigEntry<bool> tentRemovable;
+
+        internal static ConfigEntry<bool> changeHead;
+        internal static ConfigEntry<bool> changeShields;
+        internal static ConfigEntry<bool> changeTent;
 
         public static string configDirectory;
 
@@ -47,11 +73,37 @@ namespace LongshipUpgrades
 
         public void ConfigInit()
         {
-            config("General", "NexusID", 0, "Nexus mod ID for updates", false);
+            config("General", "NexusID", 2885, "Nexus mod ID for updates", false);
 
-            modEnabled = config("General", "Enabled", defaultValue: true, "Enable this mod.");
             configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only.");
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging. [Not Synced with Server]", false);
+            hintColor = config("General", "Hint color", defaultValue: new Color(0.75f, 0.75f, 0.75f, 0.8f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
+
+            containerEnabled = config("Container", "Enable upgrades", defaultValue: true, "Container upgrades. Pls be aware items in upgraded slots will be unavailable after mod disabling. But it will drop on ship destruction.");
+            containerHeight = config("Container", "Upgraded height", defaultValue: 4, "Height of ship container after upgrade.");
+            containerWidth = config("Container", "Upgraded width", defaultValue: 7, "Width of ship container after upgrade.");
+
+            healthEnabled = config("Health", "Enable upgrades", defaultValue: true, "Health upgrades.");
+            healthUpgradeLvl1 = config("Health", "Lvl 1 Upgrade", defaultValue: 1500, "Health of ship container after first upgrade.");
+            healthUpgradeLvl2 = config("Health", "Lvl 2 Upgrade", defaultValue: 2000, "Health of ship container after second upgrade.");
+            ashlandsProtection = config("Health", "Lvl 2 Ashlands protection", defaultValue: true, "Should be ship protected from ashlands ocean after second upgrade.");
+
+            lanternEnabled = config("Lantern", "Enable upgrades", defaultValue: true, "Lantern upgrades requires mast to be upgraded.");
+            lanternRemovable = config("Lantern", "Make removable", defaultValue: true, "Make lantern removable. World restart or ship rebuild required to apply changes.");
+            lanternAutoSwtich = config("Lantern", "Light auto enabled and disabled", defaultValue: true, "Light will be automatically enabled in night time or dark environments and automatically disabled in day light");
+            lanternSwitchable = config("Lantern", "Light switch enabled", defaultValue: true, "Enable manual light switch. World restart or ship rebuild required to apply changes.");
+            lanternLightColor = config("Lantern", "Light color", defaultValue: new Color(0.96f, 0.78f, 0.68f, 1f), "Color of lantern light. Switch light to apply changes.");
+
+            mastEnabled = config("Mast", "Enable upgrades", defaultValue: true, "Mast upgrade makes lantern and tent upgrades possible.");
+            mastRemovable = config("Mast", "Make removable", defaultValue: true, "Enable mast removal. World restart or ship rebuild required to apply changes.");
+
+            tentEnabled = config("Tent", "Enable upgrades", defaultValue: true, "Tent upgrades requires mast to be upgraded.");
+            tentHeat = config("Tent", "Heat enabled", defaultValue: true, "Enable heat zone under the tent to get place to rest. Enabled lantern required.");
+            tentRemovable = config("Tent", "Make removable", defaultValue: true, "Enable tent removal. World restart or ship rebuild required to apply changes.");
+
+            changeHead = config("Style", "Change heads", defaultValue: true, "Change ship's head style.");
+            changeShields = config("Style", "Change shields color", defaultValue: true, "Change shields colors. World restart or ship rebuild required to apply changes.");
+            changeTent = config("Style", "Change tent color", defaultValue: true, "Change tent colors. World restart or ship rebuild required to apply changes.");
         }
 
         private void OnDestroy()
@@ -224,15 +276,18 @@ namespace LongshipUpgrades
                 if (!IsControlledComponent(__instance))
                     return;
 
+                if (!containerEnabled.Value)
+                    return;
+
                 ZNetView m_nview = (__instance.m_rootObjectOverride ? __instance.m_rootObjectOverride.GetComponent<ZNetView>() : __instance.GetComponent<ZNetView>());
                 if (m_nview == null || !m_nview.IsValid())
                     return;
 
-                if (m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_containerUpgradedLvl1) && __instance.m_width < 7)
-                    __instance.m_width = 7;
+                if (m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_containerUpgradedLvl1) && __instance.m_width < containerWidth.Value)
+                    __instance.m_width = containerWidth.Value;
 
-                if (m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_containerUpgradedLvl2) && __instance.m_height < 4)
-                    __instance.m_height = 4;
+                if (m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_containerUpgradedLvl2) && __instance.m_height < containerHeight.Value)
+                    __instance.m_height = containerHeight.Value;
             }
         }
     }
