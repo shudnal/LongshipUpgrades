@@ -3,6 +3,9 @@ using BepInEx.Configuration;
 using HarmonyLib;
 using ServerSync;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 namespace LongshipUpgrades
@@ -24,6 +27,8 @@ namespace LongshipUpgrades
         internal static ConfigEntry<bool> configLocked;
         internal static ConfigEntry<bool> loggingEnabled;
 
+        public static string configDirectory;
+
         private void Awake()
         {
             harmony.PatchAll();
@@ -33,7 +38,11 @@ namespace LongshipUpgrades
             ConfigInit();
             _ = configSync.AddLockingConfigEntry(configLocked);
 
+            configDirectory = Path.Combine(Paths.ConfigPath, pluginID);
+
             Game.isModded = true;
+
+            LoadIcons();
         }
 
         public void ConfigInit()
@@ -69,6 +78,43 @@ namespace LongshipUpgrades
         }
 
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, string description, bool synchronizedSetting = true) => config(group, name, defaultValue, new ConfigDescription(description), synchronizedSetting);
+
+        private void LoadIcons()
+        {
+            LoadTexture("ashlands_hull.png", ref LongshipCustomizableParts.s_ashlandsHull);
+            LoadTexture("tent_blue.png", ref LongshipCustomizableParts.s_tentBlue);
+            LoadTexture("tent_black.png", ref LongshipCustomizableParts.s_tentBlack);
+        }
+
+        internal static void LoadIcon(string filename, ref Sprite icon)
+        {
+            Texture2D tex = new Texture2D(2, 2);
+            if (LoadTexture(filename, ref tex))
+                icon = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.zero);
+        }
+
+        internal static bool LoadTexture(string filename, ref Texture2D tex)
+        {
+            string fileInConfigFolder = Path.Combine(configDirectory, filename);
+            if (File.Exists(fileInConfigFolder))
+            {
+                LogInfo($"Loaded image: {fileInConfigFolder}");
+                return tex.LoadImage(File.ReadAllBytes(fileInConfigFolder));
+            }
+
+            Assembly executingAssembly = Assembly.GetExecutingAssembly();
+
+            string name = executingAssembly.GetManifestResourceNames().Single(str => str.EndsWith(filename));
+
+            Stream resourceStream = executingAssembly.GetManifestResourceStream(name);
+
+            byte[] data = new byte[resourceStream.Length];
+            resourceStream.Read(data, 0, data.Length);
+
+            tex.name = Path.GetFileNameWithoutExtension(filename);
+
+            return tex.LoadImage(data, true);
+        }
 
         [HarmonyPatch(typeof(ZoneSystem), nameof(ZoneSystem.Start))]
         public static class ZoneSystem_Start_FixCustomizableParts
@@ -113,7 +159,7 @@ namespace LongshipUpgrades
                 if (!triggerCounter.TryGetValue(__instance, out Dictionary<Collider, int> colliderTriggered))
                     return true;
 
-                if (!colliderTriggered.TryGetValue(collider, out int counter))
+                if (!colliderTriggered.ContainsKey(collider))
                 {
                     colliderTriggered[collider] = 1;
                     return true;
@@ -165,23 +211,6 @@ namespace LongshipUpgrades
             }
         }
 
-        [HarmonyPatch(typeof(Ship), nameof(Ship.Awake))]
-        public static class Ship_Awake_HealthUpgrades
-        {
-            public static void Postfix(Ship __instance)
-            {
-                if (!IsControlledComponent(__instance))
-                    return;
-
-                if (!__instance || !__instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_protectionUpgraded))
-                    return;
-
-                WearNTear component = __instance.GetComponent<WearNTear>();
-                if ((bool)component && component.m_health < 1500)
-                    component.m_health = 1500;
-            }
-        }
-
         [HarmonyPatch(typeof(Container), nameof(Container.Awake))]
         public static class Container_Awake_CargoUpgrades
         {
@@ -204,59 +233,6 @@ namespace LongshipUpgrades
 
                 if (m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_containerUpgradedLvl2) && __instance.m_height < 4)
                     __instance.m_height = 4;
-            }
-        }
-        
-        [HarmonyPatch(typeof(Ladder))]
-        public static class Ladder_ProtectionUpgrades
-        {
-            [HarmonyPostfix]
-            [HarmonyPriority(Priority.First)]
-            [HarmonyPatch(nameof(Ladder.GetHoverText))]
-            public static void GetHoverTextPostfix(Ladder __instance, ref string __result)
-            {
-                if (!IsControlledComponent(__instance))
-                    return;
-
-                ZNetView m_nview = __instance.GetComponentInParent<ZNetView>();
-
-                if (m_nview == null)
-                    return;
-
-                ZDO zdo = m_nview.GetZDO();
-                if (!zdo.GetBool(LongshipCustomizableParts.s_protectionUpgraded))
-                {
-                    if (!ZInput.IsNonClassicFunctionality() || !ZInput.IsGamepadActive())
-                        __result += Localization.instance.Localize("\n[<color=#ffff00ff><b>$KEY_AltPlace + $KEY_Use</b></color>] $menu_expand");
-                    else
-                        __result += Localization.instance.Localize("\n[<color=#ffff00ff><b>$KEY_JoyAltKeys + $KEY_Use</b></color>] $menu_expand");
-                }
-            }
-
-            [HarmonyPrefix]
-            [HarmonyPriority(Priority.First)]
-            [HarmonyPatch(nameof(Ladder.Interact))]
-            public static bool InteractPrefix(Ladder __instance, Humanoid character, ref bool hold, ref bool alt)
-            {
-                if (!IsControlledComponent(__instance))
-                    return true;
-
-                if (hold || !alt)
-                    return true;
-
-                ZNetView m_nview = __instance.GetComponentInParent<ZNetView>();
-
-                if (m_nview == null)
-                    return true;
-
-                ZDO zdo = m_nview.GetZDO();
-                if (zdo.GetBool(LongshipCustomizableParts.s_protectionUpgraded))
-                    return true;
-
-                zdo.Set(LongshipCustomizableParts.s_protectionUpgraded, true);
-                alt = false;
-                hold = true;
-                return false;
             }
         }
     }
