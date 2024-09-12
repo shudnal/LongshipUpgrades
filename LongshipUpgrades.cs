@@ -2,6 +2,7 @@
 using BepInEx.Configuration;
 using HarmonyLib;
 using ServerSync;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,7 +26,10 @@ namespace LongshipUpgrades
 
         internal static ConfigEntry<bool> configLocked;
         internal static ConfigEntry<bool> loggingEnabled;
+
         internal static ConfigEntry<Color> hintColor;
+        internal static ConfigEntry<Color> hintAmountColor;
+        internal static ConfigEntry<Color> hintItemColor;
 
         internal static ConfigEntry<bool> containerEnabled;
         internal static ConfigEntry<int> containerHeight;
@@ -53,6 +57,14 @@ namespace LongshipUpgrades
         internal static ConfigEntry<bool> changeShields;
         internal static ConfigEntry<bool> changeTent;
 
+        internal static ConfigEntry<string> mastUpgradeRecipe;
+        internal static ConfigEntry<string> lanternUpgradeRecipe;
+        internal static ConfigEntry<string> tentUpgradeRecipe;
+        internal static ConfigEntry<string> containerLvl1UpgradeRecipe;
+        internal static ConfigEntry<string> containerLvl2UpgradeRecipe;
+        internal static ConfigEntry<string> healthUpgradeRecipe;
+        internal static ConfigEntry<string> ashlandsUpgradeRecipe;
+
         public static string configDirectory;
 
         private void Awake()
@@ -77,7 +89,10 @@ namespace LongshipUpgrades
 
             configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only.");
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging. [Not Synced with Server]", false);
-            hintColor = config("General", "Hint color", defaultValue: new Color(0.75f, 0.75f, 0.75f, 0.8f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
+            
+            hintColor = config("Hint", "Hint color", defaultValue: new Color(0.75f, 0.75f, 0.75f, 0.8f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
+            hintAmountColor = config("Hint", "Entry amount color", defaultValue: new Color(1f, 1f, 0f, 0.6f), "Color for amount. [Not Synced with Server]", false);
+            hintItemColor = config("Hint", "Entry item name color", defaultValue: new Color(0.75f, 0.75f, 0.75f, 0.6f), "Color for item name. [Not Synced with Server]", false);
 
             containerEnabled = config("Container", "Enable upgrades", defaultValue: true, "Container upgrades. Pls be aware items in upgraded slots will be unavailable after mod disabling. But it will drop on ship destruction.");
             containerHeight = config("Container", "Upgraded height", defaultValue: 4, "Height of ship container after upgrade.");
@@ -104,6 +119,14 @@ namespace LongshipUpgrades
             changeHead = config("Style", "Change heads", defaultValue: true, "Change ship's head style.");
             changeShields = config("Style", "Change shields color", defaultValue: true, "Change shields colors. World restart or ship rebuild required to apply changes.");
             changeTent = config("Style", "Change tent color", defaultValue: true, "Change tent colors. World restart or ship rebuild required to apply changes.");
+
+            mastUpgradeRecipe = config("Recipes", "Mast", defaultValue: "", "Mast upgrade recipe. World restart or ship rebuild required to apply changes.");
+            lanternUpgradeRecipe = config("Recipes", "Lantern", defaultValue: "", "Lantern upgrade recipe. World restart or ship rebuild required to apply changes.");
+            tentUpgradeRecipe = config("Recipes", "Tent", defaultValue: "", "Tent upgrade recipe. World restart or ship rebuild required to apply changes.");
+            containerLvl1UpgradeRecipe = config("Recipes", "ContainerLvl1", defaultValue: "", "Container lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            containerLvl2UpgradeRecipe = config("Recipes", "ContainerLvl2", defaultValue: "", "Container lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            healthUpgradeRecipe = config("Recipes", "Health", defaultValue: "", "Hull lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            ashlandsUpgradeRecipe = config("Recipes", "Ashlands", defaultValue: "", "Hull lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
         }
 
         private void OnDestroy()
@@ -166,6 +189,34 @@ namespace LongshipUpgrades
             tex.name = Path.GetFileNameWithoutExtension(filename);
 
             return tex.LoadImage(data, true);
+        }
+
+        internal static Piece.Requirement[] ParseRequirements(string recipe)
+        {
+            List<Piece.Requirement> requirements = new List<Piece.Requirement>();
+            foreach (string requirement in recipe.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string[] req = requirement.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
+                if (req.Length != 2)
+                    continue;
+
+                int amount = int.Parse(req[1]);
+                if (amount <= 0)
+                    continue;
+
+                var prefab = ObjectDB.instance.GetItemPrefab(req[0].Trim());
+                if (prefab == null)
+                    continue;
+
+                requirements.Add(new Piece.Requirement()
+                {
+                    m_amount = amount,
+                    m_resItem = prefab.GetComponent<ItemDrop>(),
+                    m_recover = true
+                });
+            };
+
+            return requirements.ToArray();
         }
 
         [HarmonyPatch(typeof(ZoneSystem), nameof(ZoneSystem.Start))]

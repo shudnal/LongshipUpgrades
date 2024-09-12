@@ -28,7 +28,7 @@ namespace LongshipUpgrades
         public Piece.Requirement[] m_requirements = new Piece.Requirement[0];
         public Piece.Requirement[] m_requirementsLvl2 = new Piece.Requirement[0];
 
-        private static readonly StringBuilder sb = new StringBuilder(12);
+        private static readonly StringBuilder sb = new StringBuilder(20);
         private static Recipe tempRecipe;
 
         public void Awake()
@@ -71,8 +71,8 @@ namespace LongshipUpgrades
                 if (m_requirements.Length > 0)
                 {
                     sb.Append("\n");
-                    sb.Append("\n$hud_require");
-                    m_requirements.Do(req => sb.AppendFormat("\n{0}", req.m_resItem?.m_itemData.m_shared.m_name));
+                    sb.Append("\n$hud_require");    
+                    m_requirements.Do(req => AddItemRequirementToHint(req));
                 }
                 return Localization.instance.Localize(sb.ToString());
             }
@@ -90,7 +90,7 @@ namespace LongshipUpgrades
                 {
                     sb.Append("\n");
                     sb.Append("\n$hud_require");
-                    m_requirementsLvl2.Do(req => sb.AppendFormat("\n{0}", req.m_resItem?.m_itemData.m_shared.m_name));
+                    m_requirementsLvl2.Do(req => AddItemRequirementToHint(req));
                 }
 
                 return Localization.instance.Localize(sb.ToString());
@@ -199,11 +199,23 @@ namespace LongshipUpgrades
                 return true;
 
             tempRecipe.m_resources = requirements;
-            if (!player.HaveRequirementItems(tempRecipe, false, 1))
+            if (!player.HaveRequirementItems(tempRecipe, discover: false, qualityLevel: 1))
                 return false;
 
-            player.ConsumeResources(requirements, 1);
+            player.ConsumeResources(requirements, qualityLevel: 1);
             return true;
+        }
+
+        public static void AddItemRequirementToHint(Piece.Requirement requirement)
+        {
+            if (requirement.m_resItem == null)
+                return;
+
+            string itemName = requirement.m_resItem.m_itemData.m_shared.m_name;
+            
+            sb.AppendFormat("\n<color=#{0}>{1}</color> <color=#{2}>{3}</color>",
+                ColorUtility.ToHtmlStringRGBA(LongshipUpgrades.hintAmountColor.Value), requirement.GetAmount(1),
+                ColorUtility.ToHtmlStringRGBA(LongshipUpgrades.hintItemColor.Value), Player.m_localPlayer.IsMaterialKnown(itemName) ? itemName : "Unknown item");
         }
     }
 }

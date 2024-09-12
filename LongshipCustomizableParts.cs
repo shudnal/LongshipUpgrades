@@ -357,6 +357,7 @@ namespace LongshipUpgrades
                     lanternController.m_name = "Lantern";
                     lanternController.m_zdoPartUpgraded = s_lanternUpgraded;
                     lanternController.m_messageUpgrade = "Adds a lantern providing light at deck";
+                    lanternController.m_requirements = ParseRequirements(lanternUpgradeRecipe.Value);
                     lanternController.m_zdoPartDisabled = lanternRemovable.Value ? s_lanternDisabled : 0;
                     lanternController.m_messageEnable = "Hang";
                     lanternController.m_messageDisable = "Remove";
@@ -370,6 +371,7 @@ namespace LongshipUpgrades
                     tentController.m_name = "Tent";
                     tentController.m_zdoPartUpgraded = s_tentUpgraded;
                     tentController.m_messageUpgrade = "Adds an awning to protect from the elements";
+                    tentController.m_requirements = ParseRequirements(tentUpgradeRecipe.Value);
                     tentController.m_zdoPartDisabled = tentRemovable.Value ? s_tentDisabled : 0;
                     tentController.m_messageEnable = "Place";
                     tentController.m_messageDisable = "Remove";
@@ -519,6 +521,7 @@ namespace LongshipUpgrades
                 mastController.m_name = "Mast";
                 mastController.m_zdoPartUpgraded = mastEnabled.Value ? s_mastUpgraded : 0;
                 mastController.m_messageUpgrade = "Adds a beam for lantern and tent placing\nMakes the mast removable";
+                mastController.m_requirements = ParseRequirements(mastUpgradeRecipe.Value);
                 mastController.m_zdoPartDisabled = mastRemovable.Value ? s_mastRemoved : 0;
                 mastController.m_messageEnable = "Put up";
                 mastController.m_messageDisable = "Remove";
@@ -544,8 +547,10 @@ namespace LongshipUpgrades
                 storageController.m_name = m_container.m_name.StartsWith("$") ? m_container.m_name : "$msg_cart_storage";
                 storageController.m_zdoPartUpgraded = s_containerUpgradedLvl1;
                 storageController.m_messageUpgrade = "Expands storage width";
+                storageController.m_requirements = ParseRequirements(containerLvl1UpgradeRecipe.Value);
                 storageController.m_zdoPartUpgradedLvl2 = s_containerUpgradedLvl2;
                 storageController.m_messageUpgradeLvl2 = "Expands storage height";
+                storageController.m_requirementsLvl2 = ParseRequirements(containerLvl2UpgradeRecipe.Value);
                 storageController.m_nview = m_nview;
 
                 m_storageUpgrade = storageUpgradeCollider.gameObject;
@@ -583,11 +588,13 @@ namespace LongshipUpgrades
                     healthController.m_name = "Hull";
                     healthController.m_zdoPartUpgraded = s_healthUpgraded;
                     healthController.m_messageUpgrade = "Adds shields for extra protection";
+                    healthController.m_requirements = ParseRequirements(healthUpgradeRecipe.Value);
 
                     if (ashlandsProtection.Value)
                     {
                         healthController.m_zdoPartUpgradedLvl2 = s_ashlandsUpgraded;
                         healthController.m_messageUpgradeLvl2 = "Adds protection from Ashlands ocean";
+                        healthController.m_requirementsLvl2 = ParseRequirements(ashlandsUpgradeRecipe.Value);
                     }
 
                     healthUpgradeCollider.gameObject.SetActive(true);
@@ -712,11 +719,11 @@ namespace LongshipUpgrades
             }
 
             // TODO
-            // Localization
             // recipes
             // upgrade delay
             // upgrade cost
             // upgrade return
+            // Localization
         }
 
         private static bool IsNightTime()
