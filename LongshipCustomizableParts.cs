@@ -30,6 +30,8 @@ namespace LongshipUpgrades
         private GameObject m_healthUpgrade;
         private GameObject m_shieldsStyles;
         private GameObject m_headStyles;
+        private GameObject m_turrets;
+        private GameObject m_turretsUpgrade;
 
         private GameObject m_mast;
         private GameObject m_ropes;
@@ -53,6 +55,7 @@ namespace LongshipUpgrades
         private int m_tentStyle;
 
         public const string prefabName = "VikingShip";
+        public const string turretName = "piece_turret";
         private static bool prefabFixed = false;
 
         private static Material lampSharedMaterial;
@@ -74,6 +77,9 @@ namespace LongshipUpgrades
         public static readonly int s_healthUpgraded = "HealthUpgraded".GetStableHashCode();
         public static readonly int s_ashlandsUpgraded = "AshlandsUpgraded".GetStableHashCode();
 
+        public static readonly int s_turretsUpgraded = "turretsUpgraded".GetStableHashCode();
+        public static readonly int s_turretsDisabled = "turretsDisabled".GetStableHashCode();
+
         public static readonly int s_headStyle = "HeadStyle".GetStableHashCode();
         public static readonly int s_shieldsStyle = "ShieldsStyle".GetStableHashCode();
         public static readonly int s_tentStyle = "TentStyle".GetStableHashCode();
@@ -93,7 +99,6 @@ namespace LongshipUpgrades
 
             m_nview = GetComponent<ZNetView>();
             m_zdo = m_nview?.GetZDO();
-
 
             enabled = m_zdo != null;
 
@@ -132,6 +137,9 @@ namespace LongshipUpgrades
             m_holdersLeft?.SetActive(m_tent && m_tent.activeInHierarchy);
 
             m_fireWarmth?.SetActive(tentHeat.Value && m_lantern && m_lantern.activeInHierarchy && m_tent && m_tent.activeInHierarchy);
+
+            m_turretsUpgrade?.SetActive(turretsEnabled.Value);
+            m_turrets?.SetActive(turretsEnabled.Value && m_zdo.GetBool(s_turretsUpgraded));
 
             bool timeChanged = false;
             if (m_light != null && m_lantern && m_lantern.activeInHierarchy && (m_isLampLightDisabled != m_zdo.GetBool(s_lightsDisabled) || (timeChanged = isTimeToLight != IsTimeToLight()) || isNightTime != IsNightTime()))
@@ -702,8 +710,8 @@ namespace LongshipUpgrades
             if (m_heads != null)
             {
                 Transform headsControllerCollider = AddCollider(interactableParent, "heads_controller", typeof(BoxCollider));
-                headsControllerCollider.localPosition = new Vector3(-3.50f, 0.37f, 0f);
-                headsControllerCollider.localScale = new Vector3(0.04f, 0.35f, 0.60f);
+                headsControllerCollider.localPosition = new Vector3(-3.90f, 0.53f, 0f);
+                headsControllerCollider.localScale = new Vector3(0.10f, 0.45f, 0.40f);
                 headsControllerCollider.localEulerAngles = new Vector3(0f, 0f, 63f);
 
                 m_headStyles = headsControllerCollider.gameObject;
@@ -716,6 +724,68 @@ namespace LongshipUpgrades
                 headsController.m_messageSwitch = "Switch";
                 headsController.m_zdoPartVariant = s_headStyle;
                 headsController.m_variants = 4;
+            }
+
+            GameObject pieceTurret = Resources.FindObjectsOfTypeAll<Turret>().FirstOrDefault(ws => ws.name == turretName)?.gameObject;
+            if (pieceTurret != null)
+            {
+                m_turrets = new GameObject("turrets")
+                {
+                    layer = 28 // vehicle
+                };
+
+                Transform turretsParent = m_turrets.transform;
+                turretsParent.SetParent(customize, worldPositionStays: false);
+
+                Transform turretsControllerCollider = AddCollider(interactableParent, "turrets_controller", typeof(BoxCollider));
+                turretsControllerCollider.localPosition = new Vector3(-3.35f, 0.1f, 0f);
+                turretsControllerCollider.localScale = new Vector3(0.04f, 0.35f, 0.45f);
+
+                m_turretsUpgrade = turretsControllerCollider.gameObject;
+                m_turretsUpgrade.layer = 16; // piece_nonsolid
+                m_turretsUpgrade.SetActive(true);
+
+                LongshipPartController headsController = turretsControllerCollider.gameObject.AddComponent<LongshipPartController>();
+                headsController.m_name = "Turrets";
+                headsController.m_nview = m_nview;
+                headsController.m_zdoPartUpgraded = s_turretsUpgraded;
+                headsController.m_messageUpgrade = "Adds pair of mini turrets";
+                headsController.m_requirements = ParseRequirements(turretsUpgradeRecipe.Value);
+                headsController.m_zdoPartDisabled = s_turretsDisabled;
+                headsController.m_messageEnable = "Activate";
+                headsController.m_messageDisable = "Deactivate";
+
+                GameObject turret_right = Instantiate(pieceTurret.transform.Find("New").gameObject, turretsParent, worldPositionStays: false);
+                turret_right.name = "turret_right";
+                turret_right.layer = 16; // piece_nonsolid
+                turret_right.SetActive(true);
+                turret_right.transform.Find("Base").gameObject.SetActive(false);
+
+                turret_right.transform.localScale = Vector3.one * 0.25f;
+                turret_right.transform.localPosition = new Vector3(-3.3f, -0.01f, 0.53f);
+                turret_right.transform.localEulerAngles = new Vector3(0f, 350f, 0f);
+
+                BoxCollider rightCollider = turret_right.AddComponent<BoxCollider>();
+                rightCollider.center = new Vector3(0f, 0.7f, 0.1f);
+                rightCollider.size = new Vector3(1f, 2f, 1f);
+
+                GameObject turret_left = Instantiate(turret_right, turretsParent, worldPositionStays: true);
+                turret_left.name = "turret_left";
+
+                turret_left.transform.localPosition = new Vector3(-3.3f, -0.01f, -0.53f);
+                turret_left.transform.localEulerAngles = new Vector3(0f, 190f, 0f);
+
+                Turret original = pieceTurret.GetComponent<Turret>();
+                ShipTurret.m_shootEffect = original.m_shootEffect;
+                ShipTurret.m_addAmmoEffect = original.m_addAmmoEffect;
+                ShipTurret.m_reloadEffect = original.m_reloadEffect;
+                ShipTurret.m_warmUpStartEffect = original.m_warmUpStartEffect;
+                ShipTurret.m_newTargetEffect = original.m_newTargetEffect;
+                ShipTurret.m_lostTargetEffect = original.m_lostTargetEffect;
+                ShipTurret.m_setTargetEffect = original.m_setTargetEffect;
+
+                turret_right.AddComponent<ShipTurret>().SetPositionAtShip(isLeft: false).FillAllowedAmmo(original.m_allowedAmmo);
+                turret_left.AddComponent<ShipTurret>().SetPositionAtShip(isLeft: true).FillAllowedAmmo(original.m_allowedAmmo);
             }
 
             // TODO

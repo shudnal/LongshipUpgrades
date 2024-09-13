@@ -46,6 +46,8 @@ namespace LongshipUpgrades
         internal static ConfigEntry<bool> lanternSwitchable;
         internal static ConfigEntry<Color> lanternLightColor;
 
+        internal static ConfigEntry<bool> turretsEnabled;
+
         internal static ConfigEntry<bool> mastEnabled;
         internal static ConfigEntry<bool> mastRemovable;
 
@@ -64,6 +66,7 @@ namespace LongshipUpgrades
         internal static ConfigEntry<string> containerLvl2UpgradeRecipe;
         internal static ConfigEntry<string> healthUpgradeRecipe;
         internal static ConfigEntry<string> ashlandsUpgradeRecipe;
+        internal static ConfigEntry<string> turretsUpgradeRecipe;
 
         public static string configDirectory;
 
@@ -116,6 +119,8 @@ namespace LongshipUpgrades
             tentHeat = config("Tent", "Heat enabled", defaultValue: true, "Enable heat zone under the tent to get place to rest. Enabled lantern required.");
             tentRemovable = config("Tent", "Make removable", defaultValue: true, "Enable tent removal. World restart or ship rebuild required to apply changes.");
 
+            turretsEnabled = config("Turrets", "Enable upgrades", defaultValue: true, "Enable turrets upgrades.");
+
             changeHead = config("Style", "Change heads", defaultValue: true, "Change ship's head style.");
             changeShields = config("Style", "Change shields color", defaultValue: true, "Change shields colors. World restart or ship rebuild required to apply changes.");
             changeTent = config("Style", "Change tent color", defaultValue: true, "Change tent colors. World restart or ship rebuild required to apply changes.");
@@ -123,10 +128,11 @@ namespace LongshipUpgrades
             mastUpgradeRecipe = config("Recipes", "Mast", defaultValue: "", "Mast upgrade recipe. World restart or ship rebuild required to apply changes.");
             lanternUpgradeRecipe = config("Recipes", "Lantern", defaultValue: "", "Lantern upgrade recipe. World restart or ship rebuild required to apply changes.");
             tentUpgradeRecipe = config("Recipes", "Tent", defaultValue: "", "Tent upgrade recipe. World restart or ship rebuild required to apply changes.");
-            containerLvl1UpgradeRecipe = config("Recipes", "ContainerLvl1", defaultValue: "", "Container lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            containerLvl2UpgradeRecipe = config("Recipes", "ContainerLvl2", defaultValue: "", "Container lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            healthUpgradeRecipe = config("Recipes", "Health", defaultValue: "", "Hull lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            ashlandsUpgradeRecipe = config("Recipes", "Ashlands", defaultValue: "", "Hull lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            containerLvl1UpgradeRecipe = config("Recipes", "Container - Lvl 1", defaultValue: "", "Container lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            containerLvl2UpgradeRecipe = config("Recipes", "Container - Lvl 2", defaultValue: "", "Container lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            healthUpgradeRecipe = config("Recipes", "Hull - Health", defaultValue: "", "Hull lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            ashlandsUpgradeRecipe = config("Recipes", "Hull - Ashlands", defaultValue: "", "Hull lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            turretsUpgradeRecipe = config("Recipes", "Turrets", defaultValue: "", "Turrets upgrade recipe. World restart or ship rebuild required to apply changes.");
         }
 
         private void OnDestroy()
@@ -140,6 +146,11 @@ namespace LongshipUpgrades
         {
             if (loggingEnabled.Value)
                 instance.Logger.LogInfo(data);
+        }
+
+        public static void LogWarning(object data)
+        {
+            instance.Logger.LogWarning(data);
         }
 
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, ConfigDescription description, bool synchronizedSetting = true)
