@@ -85,10 +85,6 @@ namespace LongshipUpgrades
 
         public bool m_haveTarget;
 
-        public Quaternion m_baseBodyRotation;
-
-        public Quaternion m_baseNeckRotation;
-
         public Quaternion m_lastRotation;
 
         public float m_aimDiffToTarget;
@@ -180,8 +176,6 @@ namespace LongshipUpgrades
             m_eye = transform.Find("BodyRotation/Eye").gameObject;
 
             m_updateTargetTimer = UnityEngine.Random.Range(0f, m_updateTargetIntervalNear);
-            m_baseBodyRotation = m_turretBody.transform.localRotation;
-            m_baseNeckRotation = m_turretNeck.transform.localRotation;
 
             ReadTargets();
         }
@@ -284,8 +278,8 @@ namespace LongshipUpgrades
 
             Quaternion quaternion2 = Utils.RotateTorwardsSmooth(m_turretBody.transform.rotation, quaternion, m_lastRotation, m_turnRate * dt, m_lookAcceleration, m_lookDeacceleration, m_lookMinDegreesDelta);
             m_lastRotation = m_turretBody.transform.rotation;
-            m_turretBody.transform.rotation = m_baseBodyRotation * quaternion2;
-            m_turretNeck.transform.rotation = m_baseNeckRotation * Quaternion.Euler(0f, m_turretBody.transform.rotation.eulerAngles.y, m_turretBody.transform.rotation.eulerAngles.z);
+            m_turretBody.transform.rotation = quaternion2;
+            m_turretNeck.transform.localEulerAngles = new Vector3(0f, m_turretBody.transform.localEulerAngles.y, 0f);
             m_aimDiffToTarget = isReadyToShoot ? Math.Abs(Quaternion.Dot(quaternion2, quaternion)) : (-1f);
         }
 
