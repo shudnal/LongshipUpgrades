@@ -35,6 +35,7 @@ namespace LongshipUpgrades
 
         private GameObject m_mast;
         private GameObject m_ropes;
+        private GameObject m_sail;
 
         private MeshRenderer m_lampRenderer;
         private Light m_light;
@@ -53,6 +54,7 @@ namespace LongshipUpgrades
         private int m_headStyle;
         private int m_shieldsStyle;
         private int m_tentStyle;
+        private int m_sailStyle;
 
         public const string prefabName = "VikingShip";
         public const string turretName = "piece_turret";
@@ -83,11 +85,14 @@ namespace LongshipUpgrades
         public static readonly int s_headStyle = "HeadStyle".GetStableHashCode();
         public static readonly int s_shieldsStyle = "ShieldsStyle".GetStableHashCode();
         public static readonly int s_tentStyle = "TentStyle".GetStableHashCode();
+        public static readonly int s_sailStyle = "SailStyle".GetStableHashCode();
 
         public static readonly MaterialPropertyBlock s_materialBlock = new MaterialPropertyBlock();
         public static Texture2D s_ashlandsHull = new Texture2D(2, 2);
         public static Texture2D s_tentBlue = new Texture2D(2, 2);
         public static Texture2D s_tentBlack = new Texture2D(2, 2);
+        public static Texture2D s_sailBlue = new Texture2D(2, 2);
+        public static Texture2D s_sailBlack = new Texture2D(2, 2);
 
         private void Awake()
         {
@@ -234,7 +239,7 @@ namespace LongshipUpgrades
             {
                 m_tentStyle = m_zdo.GetInt(s_tentStyle);
 
-                MeshRenderer renderer = m_tent.GetComponentInChildren<MeshRenderer>();
+                Renderer renderer = m_tent.GetComponentInChildren<Renderer>();
                 if (m_tentStyle == 0)
                 {
                     renderer.SetPropertyBlock(null);
@@ -246,6 +251,26 @@ namespace LongshipUpgrades
                         s_materialBlock.SetTexture("_MainTex", s_tentBlue);
                     else if (m_tentStyle == 2)
                         s_materialBlock.SetTexture("_MainTex", s_tentBlack);
+                    renderer.SetPropertyBlock(s_materialBlock);
+                }
+            }
+
+            if (changeSail.Value && m_sail != null && m_sail.activeInHierarchy && m_sailStyle != m_zdo.GetInt(s_sailStyle))
+            {
+                m_sailStyle = m_zdo.GetInt(s_sailStyle);
+
+                Renderer renderer = m_sail.GetComponentInChildren<Renderer>();
+                if (m_sailStyle == 0)
+                {
+                    renderer.SetPropertyBlock(null);
+                }
+                else
+                {
+                    renderer.GetPropertyBlock(s_materialBlock);
+                    if (m_sailStyle == 1)
+                        s_materialBlock.SetTexture("_MainTex", s_sailBlue);
+                    else if (m_sailStyle == 2)
+                        s_materialBlock.SetTexture("_MainTex", s_sailBlack);
                     renderer.SetPropertyBlock(s_materialBlock);
                 }
             }
@@ -295,6 +320,7 @@ namespace LongshipUpgrades
         {
             m_mast = transform.Find("ship/visual/Mast").gameObject;
             m_ropes = transform.Find("ship/visual/ropes").gameObject;
+            m_sail = transform.Find("ship/visual/Mast/Sail/sail_full").gameObject;
 
             Transform customize = transform.Find("ship/visual/Customize");
             if (!customize)
@@ -352,12 +378,16 @@ namespace LongshipUpgrades
                 mastBeamCollider.localScale = new Vector3(0.16f, 0.16f, 2.5f);
 
                 Transform lanternBeamCollider = AddCollider(beam, "lantern_beam", typeof(BoxCollider));
-                lanternBeamCollider.localPosition = new Vector3(0f, 1.58f, -1.35f);
+                lanternBeamCollider.localPosition = new Vector3(0f, 1.58f, -1.4f);
                 lanternBeamCollider.localScale = new Vector3(0.16f, 0.16f, 0.8f);
 
                 Transform tentBeamCollider = AddCollider(beam, "tent_beam", typeof(BoxCollider));
-                tentBeamCollider.localPosition = new Vector3(0f, 1.58f, 0.2f);
-                tentBeamCollider.localScale = new Vector3(0.16f, 0.16f, 2.1f);
+                tentBeamCollider.localPosition = new Vector3(0f, 1.58f, 0.23f);
+                tentBeamCollider.localScale = new Vector3(0.16f, 0.16f, 2.05f);
+
+                Transform sailBeamCollider = AddCollider(beam, "sail_beam", typeof(BoxCollider));
+                sailBeamCollider.localPosition = new Vector3(0f, 1.4f, -0.9f);
+                sailBeamCollider.localScale = new Vector3(0.23f, 0.55f, 0.2f);
 
                 if (lanternEnabled.Value)
                 {
@@ -385,6 +415,16 @@ namespace LongshipUpgrades
                     tentController.m_messageDisable = "Remove";
                     tentController.m_nview = m_nview;
                     tentController.m_useDistance = 3f;
+                }
+
+                if (changeSail.Value)
+                {
+                    LongshipPartController sailController = sailBeamCollider.gameObject.AddComponent<LongshipPartController>();
+                    sailController.m_name = "Sail";
+                    sailController.m_nview = m_nview;
+                    sailController.m_messageSwitch = "Switch";
+                    sailController.m_zdoPartVariant = s_sailStyle;
+                    sailController.m_variants = 3;
                 }
             }
 

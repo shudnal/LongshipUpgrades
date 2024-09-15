@@ -58,6 +58,7 @@ namespace LongshipUpgrades
         internal static ConfigEntry<bool> changeHead;
         internal static ConfigEntry<bool> changeShields;
         internal static ConfigEntry<bool> changeTent;
+        internal static ConfigEntry<bool> changeSail;
 
         internal static ConfigEntry<string> mastUpgradeRecipe;
         internal static ConfigEntry<string> lanternUpgradeRecipe;
@@ -83,7 +84,7 @@ namespace LongshipUpgrades
 
             Game.isModded = true;
 
-            LoadIcons();
+            LoadTextures();
         }
 
         public void ConfigInit()
@@ -124,6 +125,7 @@ namespace LongshipUpgrades
             changeHead = config("Style", "Change heads", defaultValue: true, "Change ship's head style.");
             changeShields = config("Style", "Change shields color", defaultValue: true, "Change shields colors. World restart or ship rebuild required to apply changes.");
             changeTent = config("Style", "Change tent color", defaultValue: true, "Change tent colors. World restart or ship rebuild required to apply changes.");
+            changeSail = config("Style", "Change sail color", defaultValue: true, "Change sail colors. World restart or ship rebuild required to apply changes.");
 
             mastUpgradeRecipe = config("Recipes", "Mast", defaultValue: "", "Mast upgrade recipe. World restart or ship rebuild required to apply changes.");
             lanternUpgradeRecipe = config("Recipes", "Lantern", defaultValue: "", "Lantern upgrade recipe. World restart or ship rebuild required to apply changes.");
@@ -165,11 +167,13 @@ namespace LongshipUpgrades
 
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, string description, bool synchronizedSetting = true) => config(group, name, defaultValue, new ConfigDescription(description), synchronizedSetting);
 
-        private void LoadIcons()
+        private void LoadTextures()
         {
             LoadTexture("ashlands_hull.png", ref LongshipCustomizableParts.s_ashlandsHull);
             LoadTexture("tent_blue.png", ref LongshipCustomizableParts.s_tentBlue);
             LoadTexture("tent_black.png", ref LongshipCustomizableParts.s_tentBlack);
+            LoadTexture("sail_blue.png", ref LongshipCustomizableParts.s_sailBlue);
+            LoadTexture("sail_black.png", ref LongshipCustomizableParts.s_sailBlack);
         }
 
         internal static void LoadIcon(string filename, ref Sprite icon)

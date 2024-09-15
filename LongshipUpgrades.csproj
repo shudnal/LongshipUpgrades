@@ -84,6 +84,8 @@
     <EmbeddedResource Include="Assets\ashlands_hull.png" />
     <EmbeddedResource Include="Assets\tent_blue.png" />
     <EmbeddedResource Include="Assets\tent_black.png" />
+    <EmbeddedResource Include="Assets\sail_black.png" />
+    <EmbeddedResource Include="Assets\sail_blue.png" />
     <Content Include="Libs\ServerSync.dll" />
   </ItemGroup>
   <ItemGroup>
