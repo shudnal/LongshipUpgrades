@@ -27,7 +27,7 @@ namespace LongshipUpgrades
 
         public Piece.Requirement[] m_requirements = new Piece.Requirement[0];
         public Piece.Requirement[] m_requirementsLvl2 = new Piece.Requirement[0];
-
+        
         private static readonly StringBuilder sb = new StringBuilder(20);
         private static Recipe tempRecipe;
 
@@ -38,10 +38,7 @@ namespace LongshipUpgrades
                 tempRecipe = ScriptableObject.CreateInstance<Recipe>();
                 tempRecipe.name = "LongshipPartUpgradeTempRecipe";
             }
-        }
 
-        public void Start()
-        {
             if (m_nview == null)
                 m_nview = GetComponent<ZNetView>();
         }

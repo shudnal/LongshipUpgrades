@@ -48,6 +48,9 @@ namespace LongshipUpgrades
 
         internal static ConfigEntry<bool> turretsEnabled;
 
+        internal static ConfigEntry<bool> itemStandEnabled;
+        internal static ConfigEntry<int> itemStandLength;
+
         internal static ConfigEntry<bool> mastEnabled;
         internal static ConfigEntry<bool> mastRemovable;
 
@@ -122,19 +125,22 @@ namespace LongshipUpgrades
 
             turretsEnabled = config("Turrets", "Enable upgrades", defaultValue: true, "Enable turrets upgrades.");
 
+            itemStandEnabled = config("Item stand", "Enabled", defaultValue: true, "Enable item stand on bow for trophy. Boss trophies brings Forsaken power while on ship.");
+            itemStandLength = config("Item stand", "Forsaken power length", defaultValue: 30, "Length of forsaken power applied while on ship. World restart or ship rebuild required to apply changes.");
+
             changeHead = config("Style", "Change heads", defaultValue: true, "Change ship's head style.");
             changeShields = config("Style", "Change shields color", defaultValue: true, "Change shields colors. World restart or ship rebuild required to apply changes.");
             changeTent = config("Style", "Change tent color", defaultValue: true, "Change tent colors. World restart or ship rebuild required to apply changes.");
             changeSail = config("Style", "Change sail color", defaultValue: true, "Change sail colors. World restart or ship rebuild required to apply changes.");
 
-            mastUpgradeRecipe = config("Recipes", "Mast", defaultValue: "", "Mast upgrade recipe. World restart or ship rebuild required to apply changes.");
-            lanternUpgradeRecipe = config("Recipes", "Lantern", defaultValue: "", "Lantern upgrade recipe. World restart or ship rebuild required to apply changes.");
-            tentUpgradeRecipe = config("Recipes", "Tent", defaultValue: "", "Tent upgrade recipe. World restart or ship rebuild required to apply changes.");
-            containerLvl1UpgradeRecipe = config("Recipes", "Container - Lvl 1", defaultValue: "", "Container lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            containerLvl2UpgradeRecipe = config("Recipes", "Container - Lvl 2", defaultValue: "", "Container lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            healthUpgradeRecipe = config("Recipes", "Hull - Health", defaultValue: "", "Hull lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            ashlandsUpgradeRecipe = config("Recipes", "Hull - Ashlands", defaultValue: "", "Hull lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            turretsUpgradeRecipe = config("Recipes", "Turrets", defaultValue: "", "Turrets upgrade recipe. World restart or ship rebuild required to apply changes.");
+            mastUpgradeRecipe = config("Recipes", "Mast", defaultValue: "Wood:10", "Mast upgrade recipe. World restart or ship rebuild required to apply changes.");
+            lanternUpgradeRecipe = config("Recipes", "Lantern", defaultValue: "SurtlingCore:3,BronzeNails:10,FineWood:4,Chain:1", "Lantern upgrade recipe. World restart or ship rebuild required to apply changes.");
+            tentUpgradeRecipe = config("Recipes", "Tent", defaultValue: "JuteRed:2", "Tent upgrade recipe. World restart or ship rebuild required to apply changes.");
+            containerLvl1UpgradeRecipe = config("Recipes", "Container - Lvl 1", defaultValue: "Silver:10", "Container lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            containerLvl2UpgradeRecipe = config("Recipes", "Container - Lvl 2", defaultValue: "BlackMetal:10", "Container lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            healthUpgradeRecipe = config("Recipes", "Hull - Health", defaultValue: "SerpentScale:20", "Hull lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            ashlandsUpgradeRecipe = config("Recipes", "Hull - Ashlands", defaultValue: "CeramicPlate:20,Tar:30,YggdrasilWood:20,IronNails:40", "Hull lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            turretsUpgradeRecipe = config("Recipes", "Turrets", defaultValue: "BlackMetal:15,YggdrasilWood:15,MechanicalSpring:5", "Turrets upgrade recipe. World restart or ship rebuild required to apply changes.");
         }
 
         private void OnDestroy()

@@ -125,6 +125,8 @@ namespace LongshipUpgrades
         public static EffectList m_lostTargetEffect = new EffectList();
         public static EffectList m_setTargetEffect = new EffectList();
 
+        public GameObject m_destroyedLootPrefab;
+
         public ShipTurret SetPositionAtShip(bool isLeft)
         {
             m_isLeftTurret = isLeft;
@@ -150,7 +152,7 @@ namespace LongshipUpgrades
             return this;
         }
 
-        public void FillAllowedAmmo(List<Turret.AmmoType> turretList)
+        public ShipTurret FillAllowedAmmo(List<Turret.AmmoType> turretList)
         {
             foreach (Turret.AmmoType allowedAmmo in turretList)
             {
@@ -163,6 +165,8 @@ namespace LongshipUpgrades
 
             if (m_nview && m_nview.IsValid())
                 UpdateVisualBolt();
+
+            return this;
         }
 
         public void Awake()
@@ -217,8 +221,7 @@ namespace LongshipUpgrades
                 isReadyToShoot = (bool)m_target;
                 if (isReadyToShoot)
                 {
-                    if (m_lastAmmo == null)
-                        m_lastAmmo = GetAmmoItem();
+                    m_lastAmmo ??= GetAmmoItem();
 
                     if (m_lastAmmo == null)
                     {
@@ -658,15 +661,49 @@ namespace LongshipUpgrades
         public void OnDestroyed()
         {
             if (m_nview.IsOwner() && m_returnAmmoOnDestroy)
+                DropAllItems();
+        }
+
+        public void DropAllItems()
+        {
+            int ammo = GetAmmo();
+            if (ammo <= 0)
+                return;
+
+            GameObject prefab = ZNetScene.instance.GetPrefab(GetAmmoType());
+            if (m_destroyedLootPrefab)
             {
-                GameObject prefab = ZNetScene.instance.GetPrefab(GetAmmoType());
-                for (int i = 0; i < GetAmmo(); i++)
+                Inventory inventory = SpawnContainer(m_destroyedLootPrefab);
+                while (ammo > 0)
                 {
-                    Vector3 position = base.transform.position + Vector3.up + UnityEngine.Random.insideUnitSphere * 0.3f;
-                    Quaternion rotation = Quaternion.Euler(0f, UnityEngine.Random.Range(0, 360), 0f);
-                    Instantiate(prefab, position, rotation);
+                    if (inventory.AddItem(prefab, 1))
+                        ammo--;
+                    else if (!inventory.HaveEmptySlot())
+                        inventory = SpawnContainer(m_destroyedLootPrefab);
+                    else
+                        break;
                 }
             }
+            else
+            {
+                while (ammo > 0)
+                {
+                    Vector3 position = base.transform.position + Vector3.up * 0.5f + UnityEngine.Random.insideUnitSphere * 0.3f;
+                    Quaternion rotation = Quaternion.Euler(0f, UnityEngine.Random.Range(0, 360), 0f);
+                    ItemDrop itemDrop = Instantiate(prefab, position, rotation).GetComponent<ItemDrop>();
+                    if (itemDrop == null)
+                        break;
+
+                    itemDrop.SetStack(ammo);
+                    ammo -= itemDrop.m_itemData.m_stack;
+                }
+            }
+        }
+
+        public Inventory SpawnContainer(GameObject lootContainerPrefab)
+        {
+            Vector3 position = base.transform.position + UnityEngine.Random.insideUnitSphere * 1f;
+            return UnityEngine.Object.Instantiate(lootContainerPrefab, position, UnityEngine.Random.rotation).GetComponent<Container>().GetInventory();
         }
 
         public void SetTargets()

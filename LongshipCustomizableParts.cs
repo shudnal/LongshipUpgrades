@@ -1,6 +1,8 @@
 ﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using static LongshipUpgrades.LongshipUpgrades;
 
@@ -32,6 +34,7 @@ namespace LongshipUpgrades
         private GameObject m_headStyles;
         private GameObject m_turrets;
         private GameObject m_turretsUpgrade;
+        private GameObject m_itemstandObject;
 
         private GameObject m_mast;
         private GameObject m_ropes;
@@ -40,6 +43,7 @@ namespace LongshipUpgrades
         private MeshRenderer m_lampRenderer;
         private Light m_light;
         private ParticleSystem m_flare;
+        private ItemStand m_itemstand;
 
         private GameObject[] m_containerPartsLvl1;
         private GameObject[] m_containerPartsLvl2;
@@ -56,8 +60,11 @@ namespace LongshipUpgrades
         private int m_tentStyle;
         private int m_sailStyle;
 
+        public GameObject m_destroyedLootPrefab;
+
         public const string prefabName = "VikingShip";
         public const string turretName = "piece_turret";
+        public const string moderBossStone = "BossStone_DragonQueen";
         private static bool prefabFixed = false;
 
         private static Material lampSharedMaterial;
@@ -94,6 +101,11 @@ namespace LongshipUpgrades
         public static Texture2D s_sailBlue = new Texture2D(2, 2);
         public static Texture2D s_sailBlack = new Texture2D(2, 2);
 
+        public const int piece_nonsolid = 16;
+        public const int vehicle = 28;
+
+        public static readonly Dictionary<string, SE_Stats> trophyEffects = new Dictionary<string, SE_Stats>();
+
         private void Awake()
         {
             if (prefabInit)
@@ -108,6 +120,10 @@ namespace LongshipUpgrades
             enabled = m_zdo != null;
 
             m_container = GetComponentsInChildren<Container>().Where(container => container.gameObject.name == "piece_chest").FirstOrDefault();
+            m_destroyedLootPrefab = m_container?.m_destroyedLootPrefab;
+
+            if (m_wnt)
+                m_wnt.m_onDestroyed = (Action)Delegate.Combine(m_wnt.m_onDestroyed, new Action(OnDestroyed));
         }
 
         private void Start()
@@ -145,6 +161,8 @@ namespace LongshipUpgrades
 
             m_turretsUpgrade?.SetActive(turretsEnabled.Value);
             m_turrets?.SetActive(turretsEnabled.Value && m_zdo.GetBool(s_turretsUpgraded));
+
+            m_itemstandObject?.SetActive(itemStandEnabled.Value);
 
             bool timeChanged = false;
             if (m_light != null && m_lantern && m_lantern.activeInHierarchy && (m_isLampLightDisabled != m_zdo.GetBool(s_lightsDisabled) || (timeChanged = isTimeToLight != IsTimeToLight()) || isNightTime != IsNightTime()))
@@ -194,7 +212,7 @@ namespace LongshipUpgrades
                     m_wnt.m_health = healthUpgradeLvl1.Value;
             }
 
-            if (healthEnabled.Value && m_protectiveParts != null && m_wnt && m_ashlandsUpgraded != m_zdo.GetBool(s_ashlandsUpgraded))
+            if (healthEnabled.Value && m_wnt && m_ashlandsUpgraded != m_zdo.GetBool(s_ashlandsUpgraded))
             {
                 m_ashlandsUpgraded = m_zdo.GetBool(s_ashlandsUpgraded);
 
@@ -210,16 +228,25 @@ namespace LongshipUpgrades
                         m_wnt.m_ashDamageResist = true;
                         m_wnt.m_damages.Apply(new List<HitData.DamageModPair> { new HitData.DamageModPair() { m_type = HitData.DamageType.Fire, m_modifier = HitData.DamageModifier.VeryResistant } });
 
-                        foreach (MeshRenderer renderer in new List<MeshRenderer> {
-                                                            m_wnt.m_new.transform.Find("hull").gameObject.GetComponent<MeshRenderer>(),
-                                                            m_wnt.m_worn.transform.Find("hull").gameObject.GetComponent<MeshRenderer>(),
-                                                            m_wnt.m_new.transform.Find("skull_head").gameObject.GetComponent<MeshRenderer>(),
-                                                            m_wnt.m_worn.transform.Find("skull_head").gameObject.GetComponent<MeshRenderer>()}
-                                                                .Union(m_heads.Select(head => head.GetComponent<MeshRenderer>())))
+                        foreach (Renderer renderer in new List<Renderer> {
+                                                            m_wnt.m_new.transform.Find("hull").gameObject.GetComponent<Renderer>(),
+                                                            m_wnt.m_worn.transform.Find("hull").gameObject.GetComponent<Renderer>(),
+                                                            m_wnt.m_new.transform.Find("skull_head").gameObject.GetComponent<Renderer>(),
+                                                            m_wnt.m_worn.transform.Find("skull_head").gameObject.GetComponent<Renderer>()})
                         {
                             renderer.GetPropertyBlock(s_materialBlock);
                             s_materialBlock.SetTexture("_MainTex", s_ashlandsHull);
                             renderer.SetPropertyBlock(s_materialBlock);
+                        }
+
+                        if (m_heads != null)
+                        {
+                            foreach (Renderer renderer in m_heads.Select(head => head.GetComponent<Renderer>()))
+                            {
+                                renderer.GetPropertyBlock(s_materialBlock);
+                                s_materialBlock.SetTexture("_MainTex", s_ashlandsHull);
+                                renderer.SetPropertyBlock(s_materialBlock);
+                            }
                         }
                     }
                 }
@@ -288,6 +315,37 @@ namespace LongshipUpgrades
             }
 
             m_headStyles?.SetActive(changeHead.Value);
+
+            if (m_itemstand && !string.IsNullOrWhiteSpace(m_itemstand.m_visualName) && m_ship && Ship.GetLocalShip() == m_ship)
+            {
+                if (trophyEffects.TryGetValue(m_itemstand.m_visualName, out SE_Stats gpower))
+                {
+                    SEMan seman = Player.m_localPlayer.GetSEMan();
+                    SE_Stats statusEffect = (seman.GetStatusEffect(ShipTrophyStatusEffect.statusEffecShipTrophyHash) ?? seman.AddStatusEffect(ShipTrophyStatusEffect.statusEffecShipTrophyHash)) as SE_Stats;
+                    
+                    if (statusEffect != null && statusEffect.m_name != gpower.m_name)
+                    {
+                        foreach (FieldInfo property in gpower.GetType().GetFields())
+                        {
+                            FieldInfo field = statusEffect.GetType().GetField(property.Name);
+                            if (field == null || Attribute.IsDefined(field, typeof(NonSerializedAttribute)))
+                                continue;
+
+                            switch (property.Name)
+                            {
+                                case "name":
+                                case "m_cooldown":
+                                case "m_ttl":
+                                    continue;
+                            }
+
+                            field.SetValue(statusEffect, property.GetValue(gpower));
+                        }
+                    }
+
+                    statusEffect?.ResetTime();
+                }
+            }
         }
 
         private void UpdateLights()
@@ -469,7 +527,7 @@ namespace LongshipUpgrades
             {
                 m_lantern = new GameObject("Lantern")
                 {
-                    layer = 28 // vehicle
+                    layer = vehicle
                 };
 
                 Transform lanternParent = m_lantern.transform;
@@ -479,7 +537,7 @@ namespace LongshipUpgrades
                 Transform lantern = Instantiate(lanternItem, lanternParent).transform;
                 lantern.name = "Lamp";
                 lantern.localPosition = new Vector3(0.23f, 1.9f, 0f);
-                lantern.gameObject.layer = 28; // vehicle
+                lantern.gameObject.layer = vehicle;
 
                 m_light = lantern.GetComponentInChildren<Light>();
                 m_light.color = lanternLightColor.Value;
@@ -562,7 +620,7 @@ namespace LongshipUpgrades
                 mastControllerCollider.localScale = new Vector3(0.6f, 0.17f, 0.26f);
 
                 m_mastUpgrade = mastControllerCollider.gameObject;
-                m_mastUpgrade.layer = 16; // piece_nonsolid
+                m_mastUpgrade.layer = piece_nonsolid;
                 m_mastUpgrade.SetActive(true);
 
                 LongshipPartController mastController = mastControllerCollider.gameObject.AddComponent<LongshipPartController>();
@@ -602,7 +660,7 @@ namespace LongshipUpgrades
                 storageController.m_nview = m_nview;
 
                 m_storageUpgrade = storageUpgradeCollider.gameObject;
-                m_storageUpgrade.layer = 16; // piece_nonsolid
+                m_storageUpgrade.layer = piece_nonsolid;
                 m_storageUpgrade.SetActive(false);
             }
 
@@ -646,7 +704,7 @@ namespace LongshipUpgrades
                     }
 
                     healthUpgradeCollider.gameObject.SetActive(true);
-                    healthUpgradeCollider.gameObject.layer = 16; // piece_nonsolid
+                    healthUpgradeCollider.gameObject.layer = piece_nonsolid;
                 }
             }
 
@@ -755,7 +813,7 @@ namespace LongshipUpgrades
                 headsControllerCollider.localEulerAngles = new Vector3(0f, 0f, 63f);
 
                 m_headStyles = headsControllerCollider.gameObject;
-                m_headStyles.layer = 16; // piece_nonsolid
+                m_headStyles.layer = piece_nonsolid;
                 m_headStyles.SetActive(true);
 
                 LongshipPartController headsController = headsControllerCollider.gameObject.AddComponent<LongshipPartController>();
@@ -771,7 +829,7 @@ namespace LongshipUpgrades
             {
                 m_turrets = new GameObject("turrets")
                 {
-                    layer = 28 // vehicle
+                    layer = vehicle
                 };
 
                 Transform turretsParent = m_turrets.transform;
@@ -782,14 +840,14 @@ namespace LongshipUpgrades
                 turretsControllerCollider.localScale = new Vector3(0.04f, 0.35f, 0.45f);
 
                 m_turretsUpgrade = turretsControllerCollider.gameObject;
-                m_turretsUpgrade.layer = 16; // piece_nonsolid
+                m_turretsUpgrade.layer = piece_nonsolid;
                 m_turretsUpgrade.SetActive(true);
 
                 LongshipPartController headsController = turretsControllerCollider.gameObject.AddComponent<LongshipPartController>();
                 headsController.m_name = "Turrets";
                 headsController.m_nview = m_nview;
                 headsController.m_zdoPartUpgraded = s_turretsUpgraded;
-                headsController.m_messageUpgrade = "Adds pair of mini turrets";
+                headsController.m_messageUpgrade = "Adds a pair of mini-turrets that shoot bolts at enemies";
                 headsController.m_requirements = ParseRequirements(turretsUpgradeRecipe.Value);
                 headsController.m_zdoPartDisabled = s_turretsDisabled;
                 headsController.m_messageEnable = "Activate";
@@ -797,7 +855,7 @@ namespace LongshipUpgrades
 
                 GameObject turret_right = Instantiate(pieceTurret.transform.Find("New").gameObject, turretsParent, worldPositionStays: false);
                 turret_right.name = "turret_right";
-                turret_right.layer = 16; // piece_nonsolid
+                turret_right.layer = piece_nonsolid;
                 turret_right.SetActive(true);
                 turret_right.transform.Find("Base").gameObject.SetActive(false);
 
@@ -824,16 +882,169 @@ namespace LongshipUpgrades
                 ShipTurret.m_lostTargetEffect = original.m_lostTargetEffect;
                 ShipTurret.m_setTargetEffect = original.m_setTargetEffect;
 
-                turret_right.AddComponent<ShipTurret>().SetPositionAtShip(isLeft: false).FillAllowedAmmo(original.m_allowedAmmo);
-                turret_left.AddComponent<ShipTurret>().SetPositionAtShip(isLeft: true).FillAllowedAmmo(original.m_allowedAmmo);
+                turret_right.AddComponent<ShipTurret>().SetPositionAtShip(isLeft: false).FillAllowedAmmo(original.m_allowedAmmo).m_destroyedLootPrefab = m_destroyedLootPrefab;
+                turret_left.AddComponent<ShipTurret>().SetPositionAtShip(isLeft: true).FillAllowedAmmo(original.m_allowedAmmo).m_destroyedLootPrefab = m_destroyedLootPrefab;
+            }
+
+            GameObject standBossDragon = Resources.FindObjectsOfTypeAll<ItemStand>().FirstOrDefault(ws => ws.transform.root.gameObject.name == moderBossStone)?.gameObject;
+            if (standBossDragon != null)
+            {
+                m_itemstandObject = new GameObject("BowItemStand")
+                {
+                    layer = vehicle
+                };
+
+                Transform standParent = m_itemstandObject.transform;
+                standParent.SetParent(customize, worldPositionStays: false);
+                m_itemstandObject.SetActive(false);
+
+                GameObject itemstand = Instantiate(standBossDragon, standParent, worldPositionStays: false);
+                itemstand.name = "itemstand";
+                itemstand.layer = piece_nonsolid;
+                Destroy(itemstand.transform.Find("model/wood_pole (2)").gameObject);
+
+                Transform model = itemstand.transform.Find("model");
+                model.gameObject.layer = piece_nonsolid;
+                model.gameObject.SetActive(true);
+
+                Transform plate = model.Find("plate");
+                plate.localScale = Vector3.one * 0.3f;
+                plate.gameObject.layer = piece_nonsolid;
+                Destroy(plate.GetComponent<MeshCollider>());
+                
+                Transform attach = itemstand.transform.Find("attach_trophie");
+                attach.localPosition = new Vector3(0f, -0.21f, -0.02f);
+                attach.localScale = Vector3.one * 0.75f;
+                attach.gameObject.layer = piece_nonsolid;
+
+                Transform dropspawn = itemstand.transform.Find("dropspawn");
+                dropspawn.localPosition = new Vector3(0.01f, 0.5f, -0.69f);
+                dropspawn.gameObject.layer = piece_nonsolid;
+
+                itemstand.transform.localScale = Vector3.one * 0.45f;
+                itemstand.transform.localPosition = new Vector3(-4.60f, 0.70f, 0f);
+                itemstand.transform.localEulerAngles = new Vector3(0f, 270f, 0f);
+
+                m_itemstand = itemstand.GetComponent<ItemStand>();
+                m_itemstand.m_netViewOverride = m_nview;
+                m_itemstand.m_canBeRemoved = true;
+                m_itemstand.m_guardianPower = null;
+                m_itemstand.m_supportedItems.Clear();
+
+                // ItemStand Awake call
+                m_itemstandObject.SetActive(true);
             }
 
             // TODO
             // recipes
             // upgrade delay
-            // upgrade cost
-            // upgrade return
             // Localization
+            // shield?
+        }
+
+        public void OnDestroyed()
+        {
+            if (m_nview.IsOwner())
+            {
+                DropItemStand();
+
+                DropSpentUpgrades();
+            }
+        }
+
+        private void DropItemStand()
+        {
+            if (!m_itemstand)
+                return;
+
+            string @string = m_nview.GetZDO().GetString(ZDOVars.s_item);
+            GameObject itemPrefab = ObjectDB.instance.GetItemPrefab(@string);
+            if ((bool)itemPrefab)
+            {
+                Vector3 vector = Vector3.zero;
+                Quaternion quaternion = Quaternion.identity;
+                Transform transform = itemPrefab.transform.Find("attach");
+                if ((bool)itemPrefab.transform.Find("attachobj") && (bool)transform)
+                {
+                    quaternion = transform.transform.localRotation;
+                    vector = transform.transform.localPosition;
+                }
+
+                GameObject item = Instantiate(itemPrefab, m_itemstand.m_dropSpawnPoint.position + vector, m_itemstand.m_dropSpawnPoint.rotation * quaternion);
+                ItemDrop itemDrop = item.GetComponent<ItemDrop>();
+                itemDrop.LoadFromExternalZDO(m_nview.GetZDO());
+                item.GetComponent<Rigidbody>().velocity = Vector3.up * 4f;
+
+                if (m_destroyedLootPrefab)
+                {
+                    Inventory inventory = SpawnContainer(m_destroyedLootPrefab);
+                    if (inventory.AddItem(itemDrop.m_itemData))
+                        Destroy(item);
+                }
+            }
+        }
+
+        public void DropSpentUpgrades()
+        {
+            Dictionary<int, Piece.Requirement[]> upgradeReqs = new Dictionary<int, Piece.Requirement[]>();
+            foreach (LongshipPartController partController in GetComponentsInChildren<LongshipPartController>(includeInactive: true))
+            {
+                if (partController.m_zdoPartUpgradedLvl2 != 0 && m_zdo.GetBool(partController.m_zdoPartUpgradedLvl2) && partController.m_requirementsLvl2 != null && partController.m_requirementsLvl2.Length > 0)
+                    upgradeReqs[partController.m_zdoPartUpgradedLvl2] = partController.m_requirementsLvl2;
+                
+                if (partController.m_zdoPartUpgraded != 0 && m_zdo.GetBool(partController.m_zdoPartUpgraded) && partController.m_requirements != null && partController.m_requirements.Length > 0)
+                    upgradeReqs[partController.m_zdoPartUpgraded] = partController.m_requirements;
+            }
+
+            if (upgradeReqs.Count == 0)
+                return;
+
+            upgradeReqs.Values.Do(itemsToDrop => DropRequirements(itemsToDrop.ToList()));
+        }
+
+        public void DropRequirements(List<Piece.Requirement> itemsToDrop)
+        {
+            if (m_destroyedLootPrefab)
+            {
+                Inventory inventory = SpawnContainer(m_destroyedLootPrefab);
+                while (itemsToDrop.Count > 0)
+                {
+                    Piece.Requirement item = itemsToDrop[0];
+                    if (item.m_amount <= 0)
+                        itemsToDrop.RemoveAt(0);
+                    else if (inventory.AddItem(ObjectDB.instance.GetItemPrefab(item.m_resItem.name), 1))
+                        item.m_amount--;
+                    else if (!inventory.HaveEmptySlot())
+                        inventory = SpawnContainer(m_destroyedLootPrefab);
+                    else
+                        itemsToDrop.RemoveAt(0);
+                }
+            }
+            else
+            {
+                while (itemsToDrop.Count > 0)
+                {
+                    Piece.Requirement item = itemsToDrop[0];
+                    while (item.m_amount > 0)
+                    {
+                        Vector3 position = base.transform.position + Vector3.up * 0.5f + UnityEngine.Random.insideUnitSphere * 0.3f;
+                        Quaternion rotation = Quaternion.Euler(0f, UnityEngine.Random.Range(0, 360), 0f);
+                        ItemDrop itemDrop = Instantiate(ObjectDB.instance.GetItemPrefab(item.m_resItem.name), position, rotation).GetComponent<ItemDrop>();
+                        if (itemDrop == null)
+                            break;
+
+                        itemDrop.SetStack(item.m_amount);
+                        item.m_amount -= itemDrop.m_itemData.m_stack;
+                    }
+                    itemsToDrop.RemoveAt(0);
+                }
+            }
+        }
+
+        public Inventory SpawnContainer(GameObject lootContainerPrefab)
+        {
+            Vector3 position = base.transform.position + UnityEngine.Random.insideUnitSphere * 1f;
+            return Instantiate(lootContainerPrefab, position, UnityEngine.Random.rotation).GetComponent<Container>().GetInventory();
         }
 
         private static bool IsNightTime()
@@ -854,17 +1065,27 @@ namespace LongshipUpgrades
             return true;
         }
 
+        private static void FillTrophyEffects()
+        {
+            trophyEffects.Clear();
+            foreach (ItemStand itemstand in Resources.FindObjectsOfTypeAll<ItemStand>().Where(itemstand => itemstand.m_guardianPower is SE_Stats && itemstand.m_supportedItems.Count == 1 && itemstand.m_supportedItems[0] != null))
+                trophyEffects[itemstand.m_supportedItems[0].name] = itemstand.m_guardianPower as SE_Stats;
+        }
+
         internal static void OnGlobalStart()
         {
             isNightTime = false;
             isTimeToLight = true;
 
             FixPrefab();
+
+            FillTrophyEffects();
         }
 
         internal static void OnGlobalDestroy()
         {
             lampSharedMaterial = null;
+            trophyEffects.Clear();
         }
 
         private static void FixPrefab()
@@ -886,7 +1107,7 @@ namespace LongshipUpgrades
             
             Transform beam = prefab.transform.Find("ship/visual/Customize/ShipTen2_beam");
             beam.localPosition += new Vector3(0f, 0.1f, 0f);
-            beam.gameObject.layer = 28; // vehicle
+            beam.gameObject.layer = vehicle;
 
             Transform tent = prefab.transform.Find("ship/visual/Customize/ShipTen2 (1)");
             tent.localPosition += new Vector3(0f, 0.08f, 0f);
@@ -920,7 +1141,7 @@ namespace LongshipUpgrades
             Transform collider = new GameObject(name, type).transform;
             collider.SetParent(transform, worldPositionStays: false);
             
-            collider.gameObject.layer = 28; // vehicle
+            collider.gameObject.layer = vehicle;
 
             return collider;
         }
