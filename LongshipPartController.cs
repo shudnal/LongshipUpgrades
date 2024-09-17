@@ -67,10 +67,19 @@ namespace LongshipUpgrades
                 if (m_zdoVar == 0 || zdo.GetBool(m_zdoVar))
                     return false;
 
-                if (RemoveRequiredItems(player))
-                    result = SetUpgraded(zdo);
-                else
+                if (!RemoveRequiredItems(player))
+                {
                     player.Message(MessageHud.MessageType.Center, "$msg_missingrequirement");
+                    return false;
+                }
+                    
+                zdo.Set(m_zdoVar, true);
+
+                buildEffects[m_stationName]?.Create(player.transform.position, Quaternion.identity);
+
+                PlayerProfile playerProfile = Game.instance.GetPlayerProfile();
+                playerProfile.IncrementStat(PlayerStatType.CraftsOrUpgrades);
+                playerProfile.IncrementStat(PlayerStatType.Upgrades);
 
                 return true;
             }
@@ -86,7 +95,12 @@ namespace LongshipUpgrades
                 if (m_requirements == null || m_requirements.Length == 0 || string.IsNullOrWhiteSpace(m_stationName))
                     return;
 
-                sb.Append("\n\n$hud_require");
+                sb.Append("\n");
+                
+                if (ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoBuildCost))
+                    sb.AppendFormat("\n<color=#{0}>$menu_nobuildcost</color>", ColorUtility.ToHtmlStringRGBA(LongshipUpgrades.hintStationColor.Value));
+
+                sb.Append("\n$hud_require");
 
                 if (lvlMet)
                     AddRequiredStationToHover(LongshipUpgrades.hintStationColor.Value, LongshipUpgrades.hintStationColor.Value);
@@ -163,28 +177,19 @@ namespace LongshipUpgrades
                     ColorUtility.ToHtmlStringRGBA(LongshipUpgrades.hintItemColor.Value), Player.m_localPlayer.NoCostCheat() || Player.m_localPlayer.IsMaterialKnown(itemName) ? itemName : "Unknown item");
             }
 
-            private bool SetUpgraded(ZDO zdo)
-            {
-                zdo.Set(m_zdoVar, true);
-                // Play build effect
-
-                PlayerProfile playerProfile = Game.instance.GetPlayerProfile();
-                playerProfile.IncrementStat(PlayerStatType.CraftsOrUpgrades);
-                playerProfile.IncrementStat(PlayerStatType.Upgrades);
-
-                return true;
-            }
-
             private bool RemoveRequiredItems(Player player)
             {
                 if (m_requirements.Length == 0)
                     return true;
 
-                if (player.NoCostCheat() || ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoCraftCost))
+                if (player.NoCostCheat())
                     return true;
 
                 if (!HaveCraftinStationInRange(out bool lvlMet) || !lvlMet)
                     return false;
+
+                if (ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoBuildCost))
+                    return true;
 
                 tempRecipe.m_resources = m_requirements;
                 if (!player.HaveRequirementItems(tempRecipe, discover: false, qualityLevel: 1))
@@ -215,12 +220,21 @@ namespace LongshipUpgrades
         private static Recipe tempRecipe;
         private static readonly List<CraftingStation> craftingStations = new List<CraftingStation>();
 
+        private static readonly Dictionary<string, EffectList> buildEffects = new Dictionary<string, EffectList>();
+
         public void Awake()
         {
             if (tempRecipe == null)
             {
                 tempRecipe = ScriptableObject.CreateInstance<Recipe>();
                 tempRecipe.name = "LongshipPartUpgradeTempRecipe";
+            }
+
+            if (buildEffects.Count == 0)
+            {
+                ObjectDB.instance?.m_recipes.Where(recipe => recipe.m_craftingStation != null
+                                                         && recipe.m_craftingStation.m_craftItemEffects.HasEffects())
+                    .Do(recipe => buildEffects[recipe.m_craftingStation.m_name] = recipe.m_craftingStation.m_craftItemEffects);
             }
 
             if (m_nview == null)

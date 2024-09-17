@@ -637,7 +637,7 @@ namespace LongshipUpgrades
                 mastController.m_nview = m_nview;
                 mastController.m_useDistance = 2.5f;
                 mastController.AddUpgradeRequirement(mastEnabled.Value ? s_mastUpgraded : 0,
-                                                     "Adds a beam for lantern and tent placing\nMakes the mast removable",
+                                                     "Adds a beam for a lantern and a tent placing\nMakes the mast removable",
                                                      ParseRequirements(mastUpgradeRecipe.Value),
                                                      mastStation.Value,
                                                      mastStationLvl.Value,
@@ -916,7 +916,7 @@ namespace LongshipUpgrades
             GameObject standBossDragon = Resources.FindObjectsOfTypeAll<ItemStand>().FirstOrDefault(ws => ws.transform.root.gameObject.name == moderBossStone)?.gameObject;
             if (standBossDragon != null)
             {
-                m_itemstandObject = new GameObject("BowItemStand")
+                m_itemstandObject = new GameObject("ItemStand_Bow")
                 {
                     layer = vehicle
                 };
@@ -964,7 +964,6 @@ namespace LongshipUpgrades
 
             // TODO
             // recipe balance
-            // upgrade delay
             // Localization
             // move barrel
         }
@@ -1013,6 +1012,9 @@ namespace LongshipUpgrades
 
         public void DropSpentUpgrades()
         {
+            if (ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoBuildCost))
+                return;
+
             Dictionary<int, Piece.Requirement[]> upgradeReqs = new Dictionary<int, Piece.Requirement[]>();
             foreach (LongshipPartController partController in GetComponentsInChildren<LongshipPartController>(includeInactive: true))
                 partController.AddSpentUpgrades(upgradeReqs);
