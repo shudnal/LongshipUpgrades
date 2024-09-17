@@ -216,7 +216,7 @@ namespace LongshipUpgrades
             {
                 m_ashlandsUpgraded = m_zdo.GetBool(s_ashlandsUpgraded);
 
-                if (m_ashlandsUpgraded)
+                if (m_ashlandsUpgraded && healthUpgradeLvl2.Value > 0)
                 {
                     if (m_wnt.m_health < healthUpgradeLvl2.Value)
                         m_wnt.m_health = healthUpgradeLvl2.Value;
@@ -451,28 +451,34 @@ namespace LongshipUpgrades
                 {
                     LongshipPartController lanternController = lanternBeamCollider.gameObject.AddComponent<LongshipPartController>();
                     lanternController.m_name = "Lantern";
-                    lanternController.m_zdoPartUpgraded = s_lanternUpgraded;
-                    lanternController.m_messageUpgrade = "Adds a lantern providing light at deck";
-                    lanternController.m_requirements = ParseRequirements(lanternUpgradeRecipe.Value);
                     lanternController.m_zdoPartDisabled = lanternRemovable.Value ? s_lanternDisabled : 0;
                     lanternController.m_messageEnable = "Hang";
                     lanternController.m_messageDisable = "Remove";
                     lanternController.m_nview = m_nview;
                     lanternController.m_useDistance = 3f;
+                    lanternController.AddUpgradeRequirement(s_lanternUpgraded, 
+                                                            "Adds a lantern providing light at deck", 
+                                                            ParseRequirements(lanternUpgradeRecipe.Value),
+                                                            lanternStation.Value,
+                                                            lanternStationLvl.Value,
+                                                            lanternStationRange.Value);
                 }
 
                 if (tentEnabled.Value)
                 {
                     LongshipPartController tentController = tentBeamCollider.gameObject.AddComponent<LongshipPartController>();
                     tentController.m_name = "Tent";
-                    tentController.m_zdoPartUpgraded = s_tentUpgraded;
-                    tentController.m_messageUpgrade = "Adds an awning to protect from the elements";
-                    tentController.m_requirements = ParseRequirements(tentUpgradeRecipe.Value);
                     tentController.m_zdoPartDisabled = tentRemovable.Value ? s_tentDisabled : 0;
                     tentController.m_messageEnable = "Place";
                     tentController.m_messageDisable = "Remove";
                     tentController.m_nview = m_nview;
                     tentController.m_useDistance = 3f;
+                    tentController.AddUpgradeRequirement(s_tentUpgraded,
+                                                         "Adds an awning to protect from the elements",
+                                                         ParseRequirements(tentUpgradeRecipe.Value),
+                                                         tentStation.Value,
+                                                         tentStationLvl.Value,
+                                                         tentStationRange.Value);
                 }
 
                 if (changeSail.Value)
@@ -625,14 +631,17 @@ namespace LongshipUpgrades
 
                 LongshipPartController mastController = mastControllerCollider.gameObject.AddComponent<LongshipPartController>();
                 mastController.m_name = "Mast";
-                mastController.m_zdoPartUpgraded = mastEnabled.Value ? s_mastUpgraded : 0;
-                mastController.m_messageUpgrade = "Adds a beam for lantern and tent placing\nMakes the mast removable";
-                mastController.m_requirements = ParseRequirements(mastUpgradeRecipe.Value);
                 mastController.m_zdoPartDisabled = mastRemovable.Value ? s_mastRemoved : 0;
                 mastController.m_messageEnable = "Put up";
                 mastController.m_messageDisable = "Remove";
                 mastController.m_nview = m_nview;
                 mastController.m_useDistance = 2.5f;
+                mastController.AddUpgradeRequirement(mastEnabled.Value ? s_mastUpgraded : 0,
+                                                     "Adds a beam for lantern and tent placing\nMakes the mast removable",
+                                                     ParseRequirements(mastUpgradeRecipe.Value),
+                                                     mastStation.Value,
+                                                     mastStationLvl.Value,
+                                                     mastStationRange.Value);
             }
 
             // Storage controller
@@ -651,13 +660,21 @@ namespace LongshipUpgrades
 
                 LongshipPartController storageController = storageUpgradeCollider.gameObject.AddComponent<LongshipPartController>();
                 storageController.m_name = m_container.m_name.StartsWith("$") ? m_container.m_name : "$msg_cart_storage";
-                storageController.m_zdoPartUpgraded = s_containerUpgradedLvl1;
-                storageController.m_messageUpgrade = "Expands storage width";
-                storageController.m_requirements = ParseRequirements(containerLvl1UpgradeRecipe.Value);
-                storageController.m_zdoPartUpgradedLvl2 = s_containerUpgradedLvl2;
-                storageController.m_messageUpgradeLvl2 = "Expands storage height";
-                storageController.m_requirementsLvl2 = ParseRequirements(containerLvl2UpgradeRecipe.Value);
                 storageController.m_nview = m_nview;
+
+                storageController.AddUpgradeRequirement(s_containerUpgradedLvl1,
+                                                        "Expands storage width",
+                                                        ParseRequirements(containerLvl1UpgradeRecipe.Value),
+                                                        containerLvl1Station.Value,
+                                                        containerLvl1StationLvl.Value,
+                                                        containerLvl1StationRange.Value);
+
+                storageController.AddUpgradeRequirement(s_containerUpgradedLvl2,
+                                                        "Expands storage height",
+                                                        ParseRequirements(containerLvl2UpgradeRecipe.Value),
+                                                        containerLvl2Station.Value,
+                                                        containerLvl2StationLvl.Value,
+                                                        containerLvl2StationRange.Value);
 
                 m_storageUpgrade = storageUpgradeCollider.gameObject;
                 m_storageUpgrade.layer = piece_nonsolid;
@@ -692,15 +709,22 @@ namespace LongshipUpgrades
                     LongshipPartController healthController = healthUpgradeCollider.gameObject.AddComponent<LongshipPartController>();
                     healthController.m_nview = m_nview;
                     healthController.m_name = "Hull";
-                    healthController.m_zdoPartUpgraded = s_healthUpgraded;
-                    healthController.m_messageUpgrade = "Adds shields for extra protection";
-                    healthController.m_requirements = ParseRequirements(healthUpgradeRecipe.Value);
+                    healthController.AddUpgradeRequirement(s_healthUpgraded,
+                                                           "Increases health\nAdds shields for extra protection",
+                                                           ParseRequirements(healthUpgradeRecipe.Value),
+                                                           healthLvl1Station.Value,
+                                                           healthLvl1StationLvl.Value,
+                                                           healthLvl1StationRange.Value);
 
-                    if (ashlandsProtection.Value)
+
+                    if (healthUpgradeLvl2.Value != 0)
                     {
-                        healthController.m_zdoPartUpgradedLvl2 = s_ashlandsUpgraded;
-                        healthController.m_messageUpgradeLvl2 = "Adds protection from Ashlands ocean";
-                        healthController.m_requirementsLvl2 = ParseRequirements(ashlandsUpgradeRecipe.Value);
+                        healthController.AddUpgradeRequirement(s_ashlandsUpgraded,
+                                                               "Increases health" + (ashlandsProtection.Value ? "\nAdds protection from Ashlands ocean" : ""),
+                                                               ParseRequirements(ashlandsUpgradeRecipe.Value),
+                                                               healthLvl2Station.Value,
+                                                               healthLvl2StationLvl.Value,
+                                                               healthLvl2StationRange.Value);
                     }
 
                     healthUpgradeCollider.gameObject.SetActive(true);
@@ -843,15 +867,18 @@ namespace LongshipUpgrades
                 m_turretsUpgrade.layer = piece_nonsolid;
                 m_turretsUpgrade.SetActive(true);
 
-                LongshipPartController headsController = turretsControllerCollider.gameObject.AddComponent<LongshipPartController>();
-                headsController.m_name = "Turrets";
-                headsController.m_nview = m_nview;
-                headsController.m_zdoPartUpgraded = s_turretsUpgraded;
-                headsController.m_messageUpgrade = "Adds a pair of mini-turrets that shoot bolts at enemies";
-                headsController.m_requirements = ParseRequirements(turretsUpgradeRecipe.Value);
-                headsController.m_zdoPartDisabled = s_turretsDisabled;
-                headsController.m_messageEnable = "Activate";
-                headsController.m_messageDisable = "Deactivate";
+                LongshipPartController turretsController = turretsControllerCollider.gameObject.AddComponent<LongshipPartController>();
+                turretsController.m_name = "Turrets";
+                turretsController.m_nview = m_nview;
+                turretsController.m_zdoPartDisabled = s_turretsDisabled;
+                turretsController.m_messageEnable = "Activate";
+                turretsController.m_messageDisable = "Deactivate";
+                turretsController.AddUpgradeRequirement(s_turretsUpgraded,
+                                                        "Adds a pair of mini-turrets that shoot bolts at enemies",
+                                                        ParseRequirements(turretsUpgradeRecipe.Value),
+                                                        turretsStation.Value,
+                                                        turretsStationLvl.Value,
+                                                        turretsStationRange.Value);
 
                 GameObject turret_right = Instantiate(pieceTurret.transform.Find("New").gameObject, turretsParent, worldPositionStays: false);
                 turret_right.name = "turret_right";
@@ -936,10 +963,10 @@ namespace LongshipUpgrades
             }
 
             // TODO
-            // recipes
+            // recipe balance
             // upgrade delay
             // Localization
-            // shield?
+            // move barrel
         }
 
         public void OnDestroyed()
@@ -988,13 +1015,7 @@ namespace LongshipUpgrades
         {
             Dictionary<int, Piece.Requirement[]> upgradeReqs = new Dictionary<int, Piece.Requirement[]>();
             foreach (LongshipPartController partController in GetComponentsInChildren<LongshipPartController>(includeInactive: true))
-            {
-                if (partController.m_zdoPartUpgradedLvl2 != 0 && m_zdo.GetBool(partController.m_zdoPartUpgradedLvl2) && partController.m_requirementsLvl2 != null && partController.m_requirementsLvl2.Length > 0)
-                    upgradeReqs[partController.m_zdoPartUpgradedLvl2] = partController.m_requirementsLvl2;
-                
-                if (partController.m_zdoPartUpgraded != 0 && m_zdo.GetBool(partController.m_zdoPartUpgraded) && partController.m_requirements != null && partController.m_requirements.Length > 0)
-                    upgradeReqs[partController.m_zdoPartUpgraded] = partController.m_requirements;
-            }
+                partController.AddSpentUpgrades(upgradeReqs);
 
             if (upgradeReqs.Count == 0)
                 return;

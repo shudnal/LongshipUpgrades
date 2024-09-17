@@ -12,21 +12,16 @@ namespace LongshipUpgrades
         public const string statusEffectName = "$se_ship_trophy_name";
         public const string statusEffectTooltip = "$se_ship_trophy_tooltip";
 
-        internal static SE_Stats statusEffect;
-
         [HarmonyPatch(typeof(ObjectDB), nameof(ObjectDB.Awake))]
         public static class ObjectDB_Awake_AddStatusEffects
         {
             public static void AddCustomStatusEffects(ObjectDB odb)
             {
-                if (statusEffect)
-                    UnityEngine.Object.Destroy(statusEffect);
-
                 if (odb.m_StatusEffects.Count > 0)
                 {
                     if (!odb.m_StatusEffects.Any(se => se.name == statusEffectShipTrophyName))
                     {
-                        statusEffect = ScriptableObject.CreateInstance<SE_Stats>();
+                        SE_Stats statusEffect = ScriptableObject.CreateInstance<SE_Stats>();
                         statusEffect.name = statusEffectShipTrophyName;
                         statusEffect.m_nameHash = statusEffecShipTrophyHash;
 

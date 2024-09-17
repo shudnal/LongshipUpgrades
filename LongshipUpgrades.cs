@@ -27,6 +27,7 @@ namespace LongshipUpgrades
         internal static ConfigEntry<bool> configLocked;
         internal static ConfigEntry<bool> loggingEnabled;
 
+        internal static ConfigEntry<Color> hintStationColor;
         internal static ConfigEntry<Color> hintColor;
         internal static ConfigEntry<Color> hintAmountColor;
         internal static ConfigEntry<Color> hintItemColor;
@@ -34,43 +35,66 @@ namespace LongshipUpgrades
         internal static ConfigEntry<bool> containerEnabled;
         internal static ConfigEntry<int> containerHeight;
         internal static ConfigEntry<int> containerWidth;
+        internal static ConfigEntry<string> containerLvl1Station;
+        internal static ConfigEntry<int> containerLvl1StationLvl;
+        internal static ConfigEntry<int> containerLvl1StationRange;
+        internal static ConfigEntry<string> containerLvl1UpgradeRecipe;
+        internal static ConfigEntry<string> containerLvl2Station;
+        internal static ConfigEntry<int> containerLvl2StationLvl;
+        internal static ConfigEntry<int> containerLvl2StationRange;
+        internal static ConfigEntry<string> containerLvl2UpgradeRecipe;
 
         internal static ConfigEntry<bool> healthEnabled;
         internal static ConfigEntry<int> healthUpgradeLvl1;
         internal static ConfigEntry<int> healthUpgradeLvl2;
         internal static ConfigEntry<bool> ashlandsProtection;
+        internal static ConfigEntry<string> healthLvl1Station;
+        internal static ConfigEntry<int> healthLvl1StationLvl;
+        internal static ConfigEntry<int> healthLvl1StationRange;
+        internal static ConfigEntry<string> healthUpgradeRecipe;
+        internal static ConfigEntry<string> healthLvl2Station;
+        internal static ConfigEntry<int> healthLvl2StationLvl;
+        internal static ConfigEntry<int> healthLvl2StationRange;
+        internal static ConfigEntry<string> ashlandsUpgradeRecipe;
 
         internal static ConfigEntry<bool> lanternEnabled;
         internal static ConfigEntry<bool> lanternRemovable;
         internal static ConfigEntry<bool> lanternAutoSwtich;
         internal static ConfigEntry<bool> lanternSwitchable;
         internal static ConfigEntry<Color> lanternLightColor;
+        internal static ConfigEntry<string> lanternStation;
+        internal static ConfigEntry<int> lanternStationLvl;
+        internal static ConfigEntry<int> lanternStationRange;
+        internal static ConfigEntry<string> lanternUpgradeRecipe;
 
         internal static ConfigEntry<bool> turretsEnabled;
+        internal static ConfigEntry<string> turretsStation;
+        internal static ConfigEntry<int> turretsStationLvl;
+        internal static ConfigEntry<int> turretsStationRange;
+        internal static ConfigEntry<string> turretsUpgradeRecipe;
 
         internal static ConfigEntry<bool> itemStandEnabled;
         internal static ConfigEntry<int> itemStandLength;
 
         internal static ConfigEntry<bool> mastEnabled;
         internal static ConfigEntry<bool> mastRemovable;
+        internal static ConfigEntry<string> mastStation;
+        internal static ConfigEntry<int> mastStationLvl;
+        internal static ConfigEntry<int> mastStationRange;
+        internal static ConfigEntry<string> mastUpgradeRecipe;
 
         internal static ConfigEntry<bool> tentEnabled;
         internal static ConfigEntry<bool> tentHeat;
         internal static ConfigEntry<bool> tentRemovable;
+        internal static ConfigEntry<string> tentStation;
+        internal static ConfigEntry<int> tentStationLvl;
+        internal static ConfigEntry<int> tentStationRange;
+        internal static ConfigEntry<string> tentUpgradeRecipe;
 
         internal static ConfigEntry<bool> changeHead;
         internal static ConfigEntry<bool> changeShields;
         internal static ConfigEntry<bool> changeTent;
         internal static ConfigEntry<bool> changeSail;
-
-        internal static ConfigEntry<string> mastUpgradeRecipe;
-        internal static ConfigEntry<string> lanternUpgradeRecipe;
-        internal static ConfigEntry<string> tentUpgradeRecipe;
-        internal static ConfigEntry<string> containerLvl1UpgradeRecipe;
-        internal static ConfigEntry<string> containerLvl2UpgradeRecipe;
-        internal static ConfigEntry<string> healthUpgradeRecipe;
-        internal static ConfigEntry<string> ashlandsUpgradeRecipe;
-        internal static ConfigEntry<string> turretsUpgradeRecipe;
 
         public static string configDirectory;
 
@@ -97,33 +121,66 @@ namespace LongshipUpgrades
             configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only.");
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging. [Not Synced with Server]", false);
             
-            hintColor = config("Hint", "Hint color", defaultValue: new Color(0.75f, 0.75f, 0.75f, 0.8f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
-            hintAmountColor = config("Hint", "Entry amount color", defaultValue: new Color(1f, 1f, 0f, 0.6f), "Color for amount. [Not Synced with Server]", false);
-            hintItemColor = config("Hint", "Entry item name color", defaultValue: new Color(0.75f, 0.75f, 0.75f, 0.6f), "Color for item name. [Not Synced with Server]", false);
+            hintStationColor = config("Hint", "Station color", defaultValue: new Color(0.75f, 1f, 0.75f, 1f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
+            hintColor = config("Hint", "Hint color", defaultValue: new Color(0.678f, 0.847f, 0.902f, 1f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
+            hintAmountColor = config("Hint", "Entry amount color", defaultValue: Color.yellow, "Color for amount. [Not Synced with Server]", false);
+            hintItemColor = config("Hint", "Entry item name color", defaultValue: new Color(0.85f, 0.85f, 0.85f, 1f), "Color for item name. [Not Synced with Server]", false);
 
             containerEnabled = config("Container", "Enable upgrades", defaultValue: true, "Container upgrades. Pls be aware items in upgraded slots will be unavailable after mod disabling. But it will drop on ship destruction.");
-            containerHeight = config("Container", "Upgraded height", defaultValue: 4, "Height of ship container after upgrade.");
-            containerWidth = config("Container", "Upgraded width", defaultValue: 7, "Width of ship container after upgrade.");
+            containerWidth = config("Container", "Upgrade - Lvl 1 - Container Width", defaultValue: 7, "Width of ship container after first upgrade.");
+            containerLvl1Station = config("Container", "Upgrade - Lvl 1 - Station name", defaultValue: "$piece_workbench", "Station name token. The center of the ship is the starting point of the check.");
+            containerLvl1StationLvl = config("Container", "Upgrade - Lvl 1 - Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
+            containerLvl1StationRange = config("Container", "Upgrade - Lvl 1 - Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            containerLvl1UpgradeRecipe = config("Container", "Upgrade - Lvl 1 - Recipe", defaultValue: "Silver:10", "Container lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            containerHeight = config("Container", "Upgrade - Lvl 2 - Container Height", defaultValue: 4, "Height of ship container after second upgrade.");
+            containerLvl2Station = config("Container", "Upgrade - Lvl 2 - Station name", defaultValue: "$piece_artisanstation", "Station name token. The center of the ship is the starting point of the check.");
+            containerLvl2StationLvl = config("Container", "Upgrade - Lvl 2 - Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
+            containerLvl2StationRange = config("Container", "Upgrade - Lvl 2 - Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            containerLvl2UpgradeRecipe = config("Container", "Upgrade - Lvl 2 - Recipe", defaultValue: "BlackMetal:10", "Container lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
 
-            healthEnabled = config("Health", "Enable upgrades", defaultValue: true, "Health upgrades.");
-            healthUpgradeLvl1 = config("Health", "Lvl 1 Upgrade", defaultValue: 1500, "Health of ship container after first upgrade.");
-            healthUpgradeLvl2 = config("Health", "Lvl 2 Upgrade", defaultValue: 2000, "Health of ship container after second upgrade.");
-            ashlandsProtection = config("Health", "Lvl 2 Ashlands protection", defaultValue: true, "Should be ship protected from ashlands ocean after second upgrade.");
+            healthEnabled = config("Hull", "Enable upgrades", defaultValue: true, "Health upgrades.");
+            healthUpgradeLvl1 = config("Hull", "Upgrade - Lvl 1 - Health", defaultValue: 1500, "Health of ship hull after first upgrade.");
+            healthLvl1Station = config("Hull", "Upgrade - Lvl 1 - Station name", defaultValue: "$piece_forge", "Station name token. The center of the ship is the starting point of the check.");
+            healthLvl1StationLvl = config("Hull", "Upgrade - Lvl 1 - Station level", defaultValue: 7, "Station level. At least one station in the range must meet the level requirement.");
+            healthLvl1StationRange = config("Hull", "Upgrade - Lvl 1 - Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            healthUpgradeRecipe = config("Hull", "Upgrade - Lvl 1 - Recipe", defaultValue: "SerpentScale:20", "Hull lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            healthUpgradeLvl2 = config("Hull", "Upgrade - Lvl 2 - Health", defaultValue: 2000, "Health of ship hull after second upgrade. Set to 0 to disable upgrade.");
+            ashlandsProtection = config("Hull", "Upgrade - Lvl 2 - Ashlands protection", defaultValue: true, "Should ship be protected from ashlands ocean after second upgrade. If disabled - second upgrade will not be available.");
+            healthLvl2Station = config("Hull", "Upgrade - Lvl 2 - Station name", defaultValue: "$piece_blackforge", "Station name token. The center of the ship is the starting point of the check.");
+            healthLvl2StationLvl = config("Hull", "Upgrade - Lvl 2 - Station level", defaultValue: 3, "Station level. At least one station in the range must meet the level requirement.");
+            healthLvl2StationRange = config("Hull", "Upgrade - Lvl 2 - Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            ashlandsUpgradeRecipe = config("Hull", "Upgrade - Lvl 2 - Recipe", defaultValue: "CeramicPlate:20,Tar:30,YggdrasilWood:20,IronNails:40", "Hull lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
 
             lanternEnabled = config("Lantern", "Enable upgrades", defaultValue: true, "Lantern upgrades requires mast to be upgraded.");
             lanternRemovable = config("Lantern", "Make removable", defaultValue: true, "Make lantern removable. World restart or ship rebuild required to apply changes.");
             lanternAutoSwtich = config("Lantern", "Light auto enabled and disabled", defaultValue: true, "Light will be automatically enabled in night time or dark environments and automatically disabled in day light");
             lanternSwitchable = config("Lantern", "Light switch enabled", defaultValue: true, "Enable manual light switch. World restart or ship rebuild required to apply changes.");
             lanternLightColor = config("Lantern", "Light color", defaultValue: new Color(0.96f, 0.78f, 0.68f, 1f), "Color of lantern light. Switch light to apply changes.");
+            lanternUpgradeRecipe = config("Lantern", "Recipe", defaultValue: "SurtlingCore:3,BronzeNails:10,FineWood:4,Chain:1", "Lantern upgrade recipe. World restart or ship rebuild required to apply changes.");
+            lanternStation = config("Lantern", "Station name", defaultValue: "$piece_forge", "Station name token. The center of the ship is the starting point of the check.");
+            lanternStationLvl = config("Lantern", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
+            lanternStationRange = config("Lantern", "Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
             mastEnabled = config("Mast", "Enable upgrades", defaultValue: true, "Mast upgrade makes lantern and tent upgrades possible.");
             mastRemovable = config("Mast", "Make removable", defaultValue: true, "Enable mast removal. World restart or ship rebuild required to apply changes.");
+            mastUpgradeRecipe = config("Mast", "Recipe", defaultValue: "Wood:10", "Mast upgrade recipe. World restart or ship rebuild required to apply changes.");
+            mastStation = config("Mast", "Station name", defaultValue: "$piece_workbench", "Station name token. The center of the ship is the starting point of the check.");
+            mastStationLvl = config("Mast", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
+            mastStationRange = config("Mast", "Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
             tentEnabled = config("Tent", "Enable upgrades", defaultValue: true, "Tent upgrades requires mast to be upgraded.");
             tentHeat = config("Tent", "Heat enabled", defaultValue: true, "Enable heat zone under the tent to get place to rest. Enabled lantern required.");
             tentRemovable = config("Tent", "Make removable", defaultValue: true, "Enable tent removal. World restart or ship rebuild required to apply changes.");
+            tentUpgradeRecipe = config("Tent", "Recipe", defaultValue: "JuteRed:2", "Tent upgrade recipe. World restart or ship rebuild required to apply changes.");
+            tentStation = config("Tent", "Station name", defaultValue: "$piece_workbench", "Station name token. The center of the ship is the starting point of the check.");
+            tentStationLvl = config("Tent", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
+            tentStationRange = config("Tent", "Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
             turretsEnabled = config("Turrets", "Enable upgrades", defaultValue: true, "Enable turrets upgrades.");
+            turretsUpgradeRecipe = config("Turrets", "Recipe", defaultValue: "BlackMetal:15,YggdrasilWood:15,MechanicalSpring:5", "Turrets upgrade recipe. World restart or ship rebuild required to apply changes.");
+            turretsStation = config("Turrets", "Station name", defaultValue: "$piece_artisanstation", "Station name token. The center of the ship is the starting point of the check.");
+            turretsStationLvl = config("Turrets", "Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
+            turretsStationRange = config("Turrets", "Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
             itemStandEnabled = config("Item stand", "Enabled", defaultValue: true, "Enable item stand on bow for trophy. Boss trophies brings Forsaken power while on ship.");
             itemStandLength = config("Item stand", "Forsaken power length", defaultValue: 30, "Length of forsaken power applied while on ship. World restart or ship rebuild required to apply changes.");
@@ -133,14 +190,6 @@ namespace LongshipUpgrades
             changeTent = config("Style", "Change tent color", defaultValue: true, "Change tent colors. World restart or ship rebuild required to apply changes.");
             changeSail = config("Style", "Change sail color", defaultValue: true, "Change sail colors. World restart or ship rebuild required to apply changes.");
 
-            mastUpgradeRecipe = config("Recipes", "Mast", defaultValue: "Wood:10", "Mast upgrade recipe. World restart or ship rebuild required to apply changes.");
-            lanternUpgradeRecipe = config("Recipes", "Lantern", defaultValue: "SurtlingCore:3,BronzeNails:10,FineWood:4,Chain:1", "Lantern upgrade recipe. World restart or ship rebuild required to apply changes.");
-            tentUpgradeRecipe = config("Recipes", "Tent", defaultValue: "JuteRed:2", "Tent upgrade recipe. World restart or ship rebuild required to apply changes.");
-            containerLvl1UpgradeRecipe = config("Recipes", "Container - Lvl 1", defaultValue: "Silver:10", "Container lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            containerLvl2UpgradeRecipe = config("Recipes", "Container - Lvl 2", defaultValue: "BlackMetal:10", "Container lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            healthUpgradeRecipe = config("Recipes", "Hull - Health", defaultValue: "SerpentScale:20", "Hull lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            ashlandsUpgradeRecipe = config("Recipes", "Hull - Ashlands", defaultValue: "CeramicPlate:20,Tar:30,YggdrasilWood:20,IronNails:40", "Hull lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            turretsUpgradeRecipe = config("Recipes", "Turrets", defaultValue: "BlackMetal:15,YggdrasilWood:15,MechanicalSpring:5", "Turrets upgrade recipe. World restart or ship rebuild required to apply changes.");
         }
 
         private void OnDestroy()
@@ -345,10 +394,10 @@ namespace LongshipUpgrades
 
             public static void Prefix(Container __instance)
             {
-                if (!IsControlledComponent(__instance))
+                if (!containerEnabled.Value)
                     return;
 
-                if (!containerEnabled.Value)
+                if (!IsControlledComponent(__instance))
                     return;
 
                 ZNetView m_nview = (__instance.m_rootObjectOverride ? __instance.m_rootObjectOverride.GetComponent<ZNetView>() : __instance.GetComponent<ZNetView>());
