@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using UnityEngine;
 using static LongshipUpgrades.LongshipUpgrades;
 
@@ -43,7 +42,7 @@ namespace LongshipUpgrades
         private MeshRenderer m_lampRenderer;
         private Light m_light;
         private ParticleSystem m_flare;
-        private ItemStand m_itemstand;
+        private ShipTrophyStand m_trophyStand;
 
         private GameObject[] m_containerPartsLvl1;
         private GameObject[] m_containerPartsLvl2;
@@ -103,8 +102,6 @@ namespace LongshipUpgrades
 
         public const int piece_nonsolid = 16;
         public const int vehicle = 28;
-
-        public static readonly Dictionary<string, SE_Stats> trophyEffects = new Dictionary<string, SE_Stats>();
 
         private void Awake()
         {
@@ -315,37 +312,6 @@ namespace LongshipUpgrades
             }
 
             m_headStyles?.SetActive(changeHead.Value);
-
-            if (m_itemstand && !string.IsNullOrWhiteSpace(m_itemstand.m_visualName) && m_ship && Ship.GetLocalShip() == m_ship)
-            {
-                if (trophyEffects.TryGetValue(m_itemstand.m_visualName, out SE_Stats gpower))
-                {
-                    SEMan seman = Player.m_localPlayer.GetSEMan();
-                    SE_Stats statusEffect = (seman.GetStatusEffect(ShipTrophyStatusEffect.statusEffecShipTrophyHash) ?? seman.AddStatusEffect(ShipTrophyStatusEffect.statusEffecShipTrophyHash)) as SE_Stats;
-                    
-                    if (statusEffect != null && statusEffect.m_name != gpower.m_name)
-                    {
-                        foreach (FieldInfo property in gpower.GetType().GetFields())
-                        {
-                            FieldInfo field = statusEffect.GetType().GetField(property.Name);
-                            if (field == null || Attribute.IsDefined(field, typeof(NonSerializedAttribute)))
-                                continue;
-
-                            switch (property.Name)
-                            {
-                                case "name":
-                                case "m_cooldown":
-                                case "m_ttl":
-                                    continue;
-                            }
-
-                            field.SetValue(statusEffect, property.GetValue(gpower));
-                        }
-                    }
-
-                    statusEffect?.ResetTime();
-                }
-            }
         }
 
         private void UpdateLights()
@@ -952,13 +918,21 @@ namespace LongshipUpgrades
                 itemstand.transform.localPosition = new Vector3(-4.60f, 0.70f, 0f);
                 itemstand.transform.localEulerAngles = new Vector3(0f, 270f, 0f);
 
-                m_itemstand = itemstand.GetComponent<ItemStand>();
-                m_itemstand.m_netViewOverride = m_nview;
-                m_itemstand.m_canBeRemoved = true;
-                m_itemstand.m_guardianPower = null;
-                m_itemstand.m_supportedItems.Clear();
+                itemstand.GetComponent<BoxCollider>().size = new Vector3(0.75f, 1f, 0.5f);
 
-                // ItemStand Awake call
+                ItemStand component = itemstand.GetComponent<ItemStand>();
+
+                m_trophyStand = itemstand.AddComponent<ShipTrophyStand>();
+                m_trophyStand.m_activatePowerEffects = component.m_activatePowerEffects;
+                m_trophyStand.m_activatePowerEffectsPlayer = component.m_activatePowerEffectsPlayer;
+                m_trophyStand.m_attachOther = component.m_attachOther;
+                m_trophyStand.m_dropSpawnPoint = component.m_dropSpawnPoint;
+                m_trophyStand.m_effects = component.m_effects;
+                m_trophyStand.m_destroyEffects = component.m_destroyEffects;
+
+                Destroy(component);
+
+                // Stand Awake call
                 m_itemstandObject.SetActive(true);
             }
 
@@ -980,7 +954,7 @@ namespace LongshipUpgrades
 
         private void DropItemStand()
         {
-            if (!m_itemstand)
+            if (!m_trophyStand)
                 return;
 
             string @string = m_nview.GetZDO().GetString(ZDOVars.s_item);
@@ -996,7 +970,7 @@ namespace LongshipUpgrades
                     vector = transform.transform.localPosition;
                 }
 
-                GameObject item = Instantiate(itemPrefab, m_itemstand.m_dropSpawnPoint.position + vector, m_itemstand.m_dropSpawnPoint.rotation * quaternion);
+                GameObject item = Instantiate(itemPrefab, m_trophyStand.m_dropSpawnPoint.position + vector, m_trophyStand.m_dropSpawnPoint.rotation * quaternion);
                 ItemDrop itemDrop = item.GetComponent<ItemDrop>();
                 itemDrop.LoadFromExternalZDO(m_nview.GetZDO());
                 item.GetComponent<Rigidbody>().velocity = Vector3.up * 4f;
@@ -1088,27 +1062,17 @@ namespace LongshipUpgrades
             return true;
         }
 
-        private static void FillTrophyEffects()
-        {
-            trophyEffects.Clear();
-            foreach (ItemStand itemstand in Resources.FindObjectsOfTypeAll<ItemStand>().Where(itemstand => itemstand.m_guardianPower is SE_Stats && itemstand.m_supportedItems.Count == 1 && itemstand.m_supportedItems[0] != null))
-                trophyEffects[itemstand.m_supportedItems[0].name] = itemstand.m_guardianPower as SE_Stats;
-        }
-
         internal static void OnGlobalStart()
         {
             isNightTime = false;
             isTimeToLight = true;
 
             FixPrefab();
-
-            FillTrophyEffects();
         }
 
         internal static void OnGlobalDestroy()
         {
             lampSharedMaterial = null;
-            trophyEffects.Clear();
         }
 
         private static void FixPrefab()
