@@ -74,7 +74,6 @@ namespace LongshipUpgrades
         internal static ConfigEntry<string> turretsUpgradeRecipe;
 
         internal static ConfigEntry<bool> itemStandEnabled;
-        internal static ConfigEntry<int> itemStandLength;
 
         internal static ConfigEntry<bool> mastEnabled;
         internal static ConfigEntry<bool> mastRemovable;
@@ -130,25 +129,25 @@ namespace LongshipUpgrades
             containerWidth = config("Container", "Upgrade - Lvl 1 - Container Width", defaultValue: 7, "Width of ship container after first upgrade.");
             containerLvl1Station = config("Container", "Upgrade - Lvl 1 - Station name", defaultValue: "$piece_workbench", "Station name token. The center of the ship is the starting point of the check.");
             containerLvl1StationLvl = config("Container", "Upgrade - Lvl 1 - Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
-            containerLvl1StationRange = config("Container", "Upgrade - Lvl 1 - Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            containerLvl1StationRange = config("Container", "Upgrade - Lvl 1 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
             containerLvl1UpgradeRecipe = config("Container", "Upgrade - Lvl 1 - Recipe", defaultValue: "Silver:10", "Container lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
             containerHeight = config("Container", "Upgrade - Lvl 2 - Container Height", defaultValue: 4, "Height of ship container after second upgrade.");
             containerLvl2Station = config("Container", "Upgrade - Lvl 2 - Station name", defaultValue: "$piece_artisanstation", "Station name token. The center of the ship is the starting point of the check.");
             containerLvl2StationLvl = config("Container", "Upgrade - Lvl 2 - Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
-            containerLvl2StationRange = config("Container", "Upgrade - Lvl 2 - Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            containerLvl2StationRange = config("Container", "Upgrade - Lvl 2 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
             containerLvl2UpgradeRecipe = config("Container", "Upgrade - Lvl 2 - Recipe", defaultValue: "BlackMetal:10", "Container lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
 
             healthEnabled = config("Hull", "Enable upgrades", defaultValue: true, "Health upgrades.");
             healthUpgradeLvl1 = config("Hull", "Upgrade - Lvl 1 - Health", defaultValue: 1500, "Health of ship hull after first upgrade.");
             healthLvl1Station = config("Hull", "Upgrade - Lvl 1 - Station name", defaultValue: "$piece_forge", "Station name token. The center of the ship is the starting point of the check.");
             healthLvl1StationLvl = config("Hull", "Upgrade - Lvl 1 - Station level", defaultValue: 7, "Station level. At least one station in the range must meet the level requirement.");
-            healthLvl1StationRange = config("Hull", "Upgrade - Lvl 1 - Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            healthLvl1StationRange = config("Hull", "Upgrade - Lvl 1 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
             healthUpgradeRecipe = config("Hull", "Upgrade - Lvl 1 - Recipe", defaultValue: "SerpentScale:20", "Hull lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
             healthUpgradeLvl2 = config("Hull", "Upgrade - Lvl 2 - Health", defaultValue: 2000, "Health of ship hull after second upgrade. Set to 0 to disable upgrade.");
             ashlandsProtection = config("Hull", "Upgrade - Lvl 2 - Ashlands protection", defaultValue: true, "Should ship be protected from ashlands ocean after second upgrade. If disabled - second upgrade will not be available.");
             healthLvl2Station = config("Hull", "Upgrade - Lvl 2 - Station name", defaultValue: "$piece_blackforge", "Station name token. The center of the ship is the starting point of the check.");
             healthLvl2StationLvl = config("Hull", "Upgrade - Lvl 2 - Station level", defaultValue: 3, "Station level. At least one station in the range must meet the level requirement.");
-            healthLvl2StationRange = config("Hull", "Upgrade - Lvl 2 - Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            healthLvl2StationRange = config("Hull", "Upgrade - Lvl 2 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
             ashlandsUpgradeRecipe = config("Hull", "Upgrade - Lvl 2 - Recipe", defaultValue: "CeramicPlate:20,Tar:30,YggdrasilWood:20,IronNails:40", "Hull lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
 
             lanternEnabled = config("Lantern", "Enable upgrades", defaultValue: true, "Lantern upgrades requires mast to be upgraded.");
@@ -159,14 +158,14 @@ namespace LongshipUpgrades
             lanternUpgradeRecipe = config("Lantern", "Recipe", defaultValue: "SurtlingCore:3,BronzeNails:10,FineWood:4,Chain:1", "Lantern upgrade recipe. World restart or ship rebuild required to apply changes.");
             lanternStation = config("Lantern", "Station name", defaultValue: "$piece_forge", "Station name token. The center of the ship is the starting point of the check.");
             lanternStationLvl = config("Lantern", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
-            lanternStationRange = config("Lantern", "Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            lanternStationRange = config("Lantern", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
             mastEnabled = config("Mast", "Enable upgrades", defaultValue: true, "Mast upgrade makes lantern and tent upgrades possible.");
             mastRemovable = config("Mast", "Make removable", defaultValue: true, "Enable mast removal. World restart or ship rebuild required to apply changes.");
             mastUpgradeRecipe = config("Mast", "Recipe", defaultValue: "Wood:10", "Mast upgrade recipe. World restart or ship rebuild required to apply changes.");
             mastStation = config("Mast", "Station name", defaultValue: "$piece_workbench", "Station name token. The center of the ship is the starting point of the check.");
             mastStationLvl = config("Mast", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
-            mastStationRange = config("Mast", "Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            mastStationRange = config("Mast", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
             tentEnabled = config("Tent", "Enable upgrades", defaultValue: true, "Tent upgrades requires mast to be upgraded.");
             tentHeat = config("Tent", "Heat enabled", defaultValue: true, "Enable heat zone under the tent to get place to rest. Enabled lantern required.");
@@ -174,22 +173,20 @@ namespace LongshipUpgrades
             tentUpgradeRecipe = config("Tent", "Recipe", defaultValue: "JuteRed:2", "Tent upgrade recipe. World restart or ship rebuild required to apply changes.");
             tentStation = config("Tent", "Station name", defaultValue: "$piece_workbench", "Station name token. The center of the ship is the starting point of the check.");
             tentStationLvl = config("Tent", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
-            tentStationRange = config("Tent", "Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            tentStationRange = config("Tent", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
             turretsEnabled = config("Turrets", "Enable upgrades", defaultValue: true, "Enable turrets upgrades.");
             turretsUpgradeRecipe = config("Turrets", "Recipe", defaultValue: "BlackMetal:15,YggdrasilWood:15,MechanicalSpring:5", "Turrets upgrade recipe. World restart or ship rebuild required to apply changes.");
             turretsStation = config("Turrets", "Station name", defaultValue: "$piece_artisanstation", "Station name token. The center of the ship is the starting point of the check.");
             turretsStationLvl = config("Turrets", "Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
-            turretsStationRange = config("Turrets", "Station range", defaultValue: 60, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            turretsStationRange = config("Turrets", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
-            itemStandEnabled = config("Item stand", "Enabled", defaultValue: true, "Enable item stand on bow for trophy. Boss trophies brings Forsaken power while on ship.");
-            itemStandLength = config("Item stand", "Forsaken power length", defaultValue: 30, "Length of forsaken power applied while on ship. World restart or ship rebuild required to apply changes.");
+            itemStandEnabled = config("Item stand", "Enabled", defaultValue: true, "Enable item stand on bow for trophy. Boss trophies brings an option to cast another Forsaken power while on ship.");
 
             changeHead = config("Style", "Change heads", defaultValue: true, "Change ship's head style.");
             changeShields = config("Style", "Change shields color", defaultValue: true, "Change shields colors. World restart or ship rebuild required to apply changes.");
             changeTent = config("Style", "Change tent color", defaultValue: true, "Change tent colors. World restart or ship rebuild required to apply changes.");
             changeSail = config("Style", "Change sail color", defaultValue: true, "Change sail colors. World restart or ship rebuild required to apply changes.");
-
         }
 
         private void OnDestroy()

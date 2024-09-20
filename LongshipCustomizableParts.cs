@@ -940,6 +940,8 @@ namespace LongshipUpgrades
             // recipe balance
             // Localization
             // move barrel
+            // ward?
+            // tent, sail, shields custom textures
         }
 
         public void OnDestroyed()
