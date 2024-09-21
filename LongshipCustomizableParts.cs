@@ -952,7 +952,6 @@ namespace LongshipUpgrades
             // Localization
             // move barrel
             // ward?
-            // tent, sail, shields custom textures
         }
 
         public void OnDestroyed()
