@@ -201,6 +201,7 @@ namespace LongshipUpgrades
         }
 
         public ZNetView m_nview;
+        public Ship m_ship;
         public string m_name = "Part";
 
         public bool m_checkGuardStone = true;
@@ -238,11 +239,16 @@ namespace LongshipUpgrades
             }
 
             if (m_nview == null)
-                m_nview = GetComponent<ZNetView>();
+                m_nview = GetComponentInParent<ZNetView>();
+
+            m_ship = GetComponentInParent<Ship>();
         }
 
         public string GetHoverText()
         {
+            if (!IsPositionToInteract())
+                return "";
+
             if (!InUseDistance(Player.m_localPlayer))
                 return Localization.instance.Localize("<color=#888888>$piece_toofar</color>");
 
@@ -257,7 +263,7 @@ namespace LongshipUpgrades
                 if (upgradeRequirements.FillUpgradeHover(zdo, m_name))
                     return Localization.instance.Localize(sb.ToString());
 
-            if (m_zdoPartVariant != 0 && m_variants > 0)
+            if (m_zdoPartVariant != 0 && m_variants > 1)
             {
                 sb.Clear();
                 sb.Append(m_name);
@@ -295,6 +301,9 @@ namespace LongshipUpgrades
                 return false;
 
             if (!m_nview || !m_nview.IsValid())
+                return false;
+
+            if (!IsPositionToInteract())
                 return false;
 
             ZDO zdo = m_nview.GetZDO();
@@ -336,6 +345,13 @@ namespace LongshipUpgrades
             ZDO zdo = m_nview.GetZDO();
             foreach (UpgradeRequirements upgradeRequirements in m_upgradeRequirements)
                 upgradeRequirements.AddSpentUpgrades(zdo, upgradeReqs);
+        }
+
+        private bool IsPositionToInteract()
+        {
+            return Ship.GetLocalShip() == m_ship
+                && Vector3.Dot(base.transform.position - Player.m_localPlayer.GetEyePoint(), base.transform.position - Utils.GetMainCamera().transform.position) > 0
+                && Vector3.Dot(base.transform.position - Player.m_localPlayer.transform.position, base.transform.position - Utils.GetMainCamera().transform.position) > 0;
         }
     }
 }

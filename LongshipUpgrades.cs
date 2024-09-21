@@ -94,8 +94,14 @@ namespace LongshipUpgrades
         internal static ConfigEntry<bool> changeShields;
         internal static ConfigEntry<bool> changeTent;
         internal static ConfigEntry<bool> changeSail;
+        internal static ConfigEntry<int> maxShields;
+        internal static ConfigEntry<int> maxTents;
+        internal static ConfigEntry<int> maxSails;
 
         public static string configDirectory;
+        public const string tentsDirectory = "tents";
+        public const string sailsDirectory = "sails";
+        public const string shieldsDirectory = "shields";
 
         private void Awake()
         {
@@ -187,6 +193,10 @@ namespace LongshipUpgrades
             changeShields = config("Style", "Change shields color", defaultValue: true, "Change shields colors. World restart or ship rebuild required to apply changes.");
             changeTent = config("Style", "Change tent color", defaultValue: true, "Change tent colors. World restart or ship rebuild required to apply changes.");
             changeSail = config("Style", "Change sail color", defaultValue: true, "Change sail colors. World restart or ship rebuild required to apply changes.");
+            maxShields = config("Style", "Max shields amount", defaultValue: 0, "Maximum amount of shield variants. If 0 - amount is taken from custom textures count."+
+                                                                            "\n By default every custom texture counts as 3 shields. World restart or ship rebuild required to apply changes.");
+            maxTents = config("Style", "Max tents amount", defaultValue: 0, "Maximum amount of tent variants. If 0 - amount is taken from custom textures count. World restart or ship rebuild required to apply changes.");
+            maxSails = config("Style", "Max sails amount", defaultValue: 0, "Maximum amount of sail variants. If 0 - amount is taken from custom textures count. ");
         }
 
         private void OnDestroy()
@@ -222,10 +232,47 @@ namespace LongshipUpgrades
         private void LoadTextures()
         {
             LoadTexture("ashlands_hull.png", ref LongshipCustomizableParts.s_ashlandsHull);
-            LoadTexture("tent_blue.png", ref LongshipCustomizableParts.s_tentBlue);
-            LoadTexture("tent_black.png", ref LongshipCustomizableParts.s_tentBlack);
-            LoadTexture("sail_blue.png", ref LongshipCustomizableParts.s_sailBlue);
-            LoadTexture("sail_black.png", ref LongshipCustomizableParts.s_sailBlack);
+
+            Directory.CreateDirectory(configDirectory);
+
+            string sailOriginal = Path.Combine(configDirectory, "sail_original.png");
+            string tentOriginal = Path.Combine(configDirectory, "tent_original.png");
+            string shieldsOriginal = Path.Combine(configDirectory, "shields_original.png");
+            if (!File.Exists(sailOriginal) || !File.Exists(tentOriginal) || !File.Exists(shieldsOriginal))
+            {
+                File.WriteAllBytes(sailOriginal, GetEmbeddedFileData("sail_original.png"));
+                File.WriteAllBytes(tentOriginal, GetEmbeddedFileData("tent_original.png"));
+                File.WriteAllBytes(tentOriginal, GetEmbeddedFileData("shields_original.png"));
+            }
+
+            string tents = Path.Combine(configDirectory, tentsDirectory);
+            if (!Directory.Exists(tents))
+            {
+                Directory.CreateDirectory(tents);
+
+                File.WriteAllBytes(Path.Combine(tents, "tent_1.png"), GetEmbeddedFileData("tent_1.png"));
+                File.WriteAllBytes(Path.Combine(tents, "tent_2.png"), GetEmbeddedFileData("tent_2.png"));
+            }
+
+            string sails = Path.Combine(configDirectory, sailsDirectory);
+            if (!Directory.Exists(sails))
+            {
+                Directory.CreateDirectory(sails);
+
+                File.WriteAllBytes(Path.Combine(sails, "sail_1.png"), GetEmbeddedFileData("sail_1.png"));
+                File.WriteAllBytes(Path.Combine(sails, "sail_2.png"), GetEmbeddedFileData("sail_2.png"));
+            }
+
+            string shields = Path.Combine(configDirectory, shieldsDirectory);
+
+            foreach (FileInfo tent in new DirectoryInfo(tents).EnumerateFiles())
+                LongshipCustomizableParts.AddCustomTent(Path.Combine(tentsDirectory, tent.Name));
+
+            foreach (FileInfo sail in new DirectoryInfo(sails).EnumerateFiles())
+                LongshipCustomizableParts.AddCustomSail(Path.Combine(sailsDirectory, sail.Name));
+
+            foreach (FileInfo shield in new DirectoryInfo(shields).EnumerateFiles())
+                LongshipCustomizableParts.AddCustomShields(Path.Combine(shieldsDirectory, shield.Name));
         }
 
         internal static void LoadIcon(string filename, ref Sprite icon)
@@ -235,15 +282,27 @@ namespace LongshipUpgrades
                 icon = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.zero);
         }
 
-        internal static bool LoadTexture(string filename, ref Texture2D tex)
+        internal static bool LoadTextureFromConfigDirectory(string filename, ref Texture2D tex)
         {
             string fileInConfigFolder = Path.Combine(configDirectory, filename);
-            if (File.Exists(fileInConfigFolder))
-            {
-                LogInfo($"Loaded image: {fileInConfigFolder}");
-                return tex.LoadImage(File.ReadAllBytes(fileInConfigFolder));
-            }
+            if (!File.Exists(fileInConfigFolder))
+                return false;
 
+            LogInfo($"Loaded image from config folder: {filename}");
+            return tex.LoadImage(File.ReadAllBytes(fileInConfigFolder));
+        }
+
+        internal static bool LoadTexture(string filename, ref Texture2D tex)
+        {
+            if (LoadTextureFromConfigDirectory(filename, ref tex))
+                return true;
+
+            tex.name = Path.GetFileNameWithoutExtension(filename);
+            return tex.LoadImage(GetEmbeddedFileData(filename), true);
+        }
+
+        internal static byte[] GetEmbeddedFileData(string filename)
+        {
             Assembly executingAssembly = Assembly.GetExecutingAssembly();
 
             string name = executingAssembly.GetManifestResourceNames().Single(str => str.EndsWith(filename));
@@ -253,9 +312,7 @@ namespace LongshipUpgrades
             byte[] data = new byte[resourceStream.Length];
             resourceStream.Read(data, 0, data.Length);
 
-            tex.name = Path.GetFileNameWithoutExtension(filename);
-
-            return tex.LoadImage(data, true);
+            return data;
         }
 
         internal static Piece.Requirement[] ParseRequirements(string recipe)

@@ -95,13 +95,13 @@ namespace LongshipUpgrades
 
         public static readonly MaterialPropertyBlock s_materialBlock = new MaterialPropertyBlock();
         public static Texture2D s_ashlandsHull = new Texture2D(2, 2);
-        public static Texture2D s_tentBlue = new Texture2D(2, 2);
-        public static Texture2D s_tentBlack = new Texture2D(2, 2);
-        public static Texture2D s_sailBlue = new Texture2D(2, 2);
-        public static Texture2D s_sailBlack = new Texture2D(2, 2);
 
         public const int piece_nonsolid = 16;
         public const int vehicle = 28;
+
+        public static List<Texture2D> customTents = new List<Texture2D>();
+        public static List<Texture2D> customSails = new List<Texture2D>();
+        public static List<Texture2D> customShields = new List<Texture2D>();
 
         private void Awake()
         {
@@ -254,7 +254,25 @@ namespace LongshipUpgrades
             if (changeShields.Value && healthEnabled.Value && m_protectiveParts != null && m_healthUpgraded && m_shieldsStyle != m_zdo.GetInt(s_shieldsStyle))
             {
                 m_shieldsStyle = m_zdo.GetInt(s_shieldsStyle);
-                m_protectiveParts.Do(part => part.GetComponent<ItemStyle>().Setup(m_shieldsStyle));
+                if (maxShields.Value != 0 && m_shieldsStyle > maxShields.Value)
+                {
+                    m_shieldsStyle %= maxShields.Value;
+                    m_zdo.Set(s_shieldsStyle, m_shieldsStyle);
+                }
+
+                int style = m_shieldsStyle > 3 ? (m_shieldsStyle - 1) % 3 + 1 : m_shieldsStyle;
+                int texId = m_shieldsStyle > 3 ? (m_shieldsStyle - 4) / 3 : -1;
+                foreach (GameObject part in m_protectiveParts)
+                {
+                    s_materialBlock.Clear();
+                    s_materialBlock.SetInt("_Style", style);
+
+                    Renderer renderer = part.GetComponent<Renderer>();
+                    if (-1 < texId && texId < customShields.Count)
+                        s_materialBlock.SetTexture("_StyleTex", customShields[texId]);
+
+                    renderer.SetPropertyBlock(s_materialBlock);
+                }
             }
 
             m_shieldsStyles?.SetActive(m_healthUpgraded);
@@ -264,17 +282,14 @@ namespace LongshipUpgrades
                 m_tentStyle = m_zdo.GetInt(s_tentStyle);
 
                 Renderer renderer = m_tent.GetComponentInChildren<Renderer>();
-                if (m_tentStyle == 0)
+                if (m_tentStyle == 0 || customTents.Count == 0)
                 {
                     renderer.SetPropertyBlock(null);
                 }
                 else
                 {
                     renderer.GetPropertyBlock(s_materialBlock);
-                    if (m_tentStyle == 1)
-                        s_materialBlock.SetTexture("_MainTex", s_tentBlue);
-                    else if (m_tentStyle == 2)
-                        s_materialBlock.SetTexture("_MainTex", s_tentBlack);
+                    s_materialBlock.SetTexture("_MainTex", customTents[(m_tentStyle - 1) % (maxTents.Value == 0 ? customTents.Count : Math.Min(maxTents.Value, customTents.Count))]);
                     renderer.SetPropertyBlock(s_materialBlock);
                 }
             }
@@ -284,17 +299,14 @@ namespace LongshipUpgrades
                 m_sailStyle = m_zdo.GetInt(s_sailStyle);
 
                 Renderer renderer = m_sail.GetComponentInChildren<Renderer>();
-                if (m_sailStyle == 0)
+                if (m_sailStyle == 0 || customSails.Count == 0)
                 {
                     renderer.SetPropertyBlock(null);
                 }
                 else
                 {
                     renderer.GetPropertyBlock(s_materialBlock);
-                    if (m_sailStyle == 1)
-                        s_materialBlock.SetTexture("_MainTex", s_sailBlue);
-                    else if (m_sailStyle == 2)
-                        s_materialBlock.SetTexture("_MainTex", s_sailBlack);
+                    s_materialBlock.SetTexture("_MainTex", customSails[(m_sailStyle - 1) % (maxSails.Value == 0 ? customSails.Count : Math.Min(maxSails.Value, customSails.Count))]);
                     renderer.SetPropertyBlock(s_materialBlock);
                 }
             }
@@ -381,7 +393,6 @@ namespace LongshipUpgrades
                 m_containerPartsLvl1 = barrels.ToArray();
                 m_containerPartsLvl2 = boxes.ToArray();
                 m_protectiveParts = shields.ToArray();
-                m_protectiveParts.Do(part => part.AddComponent<ItemStyle>());
             }
 
             Transform beam = customize.Find("ShipTen2_beam");
@@ -454,7 +465,7 @@ namespace LongshipUpgrades
                     sailController.m_nview = m_nview;
                     sailController.m_messageSwitch = "Switch";
                     sailController.m_zdoPartVariant = s_sailStyle;
-                    sailController.m_variants = 3;
+                    sailController.m_variants = customSails.Count + 1;
                 }
             }
 
@@ -490,7 +501,7 @@ namespace LongshipUpgrades
                         tentController.m_nview = m_nview;
                         tentController.m_messageSwitch = "Switch";
                         tentController.m_zdoPartVariant = s_tentStyle;
-                        tentController.m_variants = 3;
+                        tentController.m_variants = customTents.Count + 1;
                     }
             }
 
@@ -744,7 +755,7 @@ namespace LongshipUpgrades
                         shieldController.m_nview = m_nview;
                         shieldController.m_messageSwitch = "Switch";
                         shieldController.m_zdoPartVariant = s_shieldsStyle;
-                        shieldController.m_variants = 4;
+                        shieldController.m_variants = 4 + 3 * customShields.Count;
                     }
             }
 
@@ -1133,6 +1144,28 @@ namespace LongshipUpgrades
             collider.gameObject.layer = vehicle;
 
             return collider;
+        }
+
+        internal static void AddCustomTent(string filename)
+        {
+            AddCustomTexture(customTents, filename);
+        }
+
+        internal static void AddCustomSail(string filename)
+        {
+            AddCustomTexture(customSails, filename);
+        }
+
+        internal static void AddCustomShields(string filename)
+        {
+            AddCustomTexture(customShields, filename);
+        }
+
+        private static void AddCustomTexture(List<Texture2D> list, string filename)
+        {
+            Texture2D tex = new Texture2D(2, 2);
+            if (LoadTextureFromConfigDirectory(filename, ref tex))
+                list.Add(tex);
         }
     }
 }
