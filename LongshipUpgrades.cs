@@ -242,7 +242,7 @@ namespace LongshipUpgrades
             {
                 File.WriteAllBytes(sailOriginal, GetEmbeddedFileData("sail_original.png"));
                 File.WriteAllBytes(tentOriginal, GetEmbeddedFileData("tent_original.png"));
-                File.WriteAllBytes(tentOriginal, GetEmbeddedFileData("shields_original.png"));
+                File.WriteAllBytes(shieldsOriginal, GetEmbeddedFileData("shields_original.png"));
             }
 
             string tents = Path.Combine(configDirectory, tentsDirectory);
