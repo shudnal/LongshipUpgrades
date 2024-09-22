@@ -268,6 +268,7 @@ namespace LongshipUpgrades
             }
 
             string shields = Path.Combine(configDirectory, shieldsDirectory);
+            Directory.CreateDirectory(shields);
 
             foreach (FileInfo tent in new DirectoryInfo(tents).EnumerateFiles().OrderBy(file => file.Name))
                 LongshipCustomizableParts.AddCustomTent(Path.Combine(tentsDirectory, tent.Name));
