@@ -117,6 +117,8 @@ namespace LongshipUpgrades
             Game.isModded = true;
 
             LoadTextures();
+
+            LocalizationManager.Localizer.Load();
         }
 
         public void ConfigInit()

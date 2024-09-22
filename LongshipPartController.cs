@@ -21,7 +21,7 @@ namespace LongshipUpgrades
             {
                 m_zdoVar = zdoVar;
                 m_requirements = requirements;
-                m_messageUpgrade += message;
+                m_messageUpgrade = message;
                 m_stationName = station;
                 m_stationLevel = level;
                 m_stationRange = range;
@@ -36,7 +36,7 @@ namespace LongshipUpgrades
 
                 if (!Player.m_localPlayer.NoCostCheat() && !Player.m_localPlayer.KnowStationLevel(m_stationName, m_stationLevel))
                 {
-                    AddUpgradeHintToHover("Unknown upgrade");
+                    AddUpgradeHintToHover("$lu_controller_message_unknownupgrade");
                     return true;
                 }
 
@@ -70,7 +70,7 @@ namespace LongshipUpgrades
                 if (!RemoveRequiredItems(player))
                 {
                     player.Message(MessageHud.MessageType.Center, "$msg_missingrequirement");
-                    return false;
+                    return true;
                 }
                     
                 zdo.Set(m_zdoVar, true);
@@ -81,6 +81,7 @@ namespace LongshipUpgrades
                 playerProfile.IncrementStat(PlayerStatType.CraftsOrUpgrades);
                 playerProfile.IncrementStat(PlayerStatType.Upgrades);
 
+                result = true;
                 return true;
             }
 
@@ -174,7 +175,7 @@ namespace LongshipUpgrades
 
                 sb.AppendFormat("\n<color=#{0}>{1}</color> <color=#{2}>{3}</color>",
                     ColorUtility.ToHtmlStringRGBA(LongshipUpgrades.hintAmountColor.Value), requirement.GetAmount(1),
-                    ColorUtility.ToHtmlStringRGBA(LongshipUpgrades.hintItemColor.Value), Player.m_localPlayer.NoCostCheat() || Player.m_localPlayer.IsMaterialKnown(itemName) ? itemName : "Unknown item");
+                    ColorUtility.ToHtmlStringRGBA(LongshipUpgrades.hintItemColor.Value), Player.m_localPlayer.NoCostCheat() || Player.m_localPlayer.IsMaterialKnown(itemName) ? itemName : "$lu_controller_message_unknownitem");
             }
 
             private bool RemoveRequiredItems(Player player)
@@ -184,6 +185,9 @@ namespace LongshipUpgrades
 
                 if (player.NoCostCheat())
                     return true;
+
+                if (!player.KnowStationLevel(m_stationName, m_stationLevel))
+                    return false;
 
                 if (!HaveCraftinStationInRange(out bool lvlMet) || !lvlMet)
                     return false;
@@ -207,9 +211,9 @@ namespace LongshipUpgrades
         public bool m_checkGuardStone = true;
         public float m_useDistance = 0f;
 
-        public string m_messageEnable = "Add";
-        public string m_messageSwitch = "Switch";
-        public string m_messageDisable = "Remove";
+        public string m_messageEnable = "$lu_controller_message_enable";
+        public string m_messageSwitch = "$lu_controller_message_switch";
+        public string m_messageDisable = "$lu_controller_message_disable";
 
         public UpgradeRequirements[] m_upgradeRequirements = new UpgradeRequirements[0];
         public int m_zdoPartDisabled;

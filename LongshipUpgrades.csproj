@@ -58,6 +58,10 @@
     <Reference Include="BepInEx">
       <HintPath>F:\Steam\steamapps\common\Valheim\BepInEx\core\BepInEx.dll</HintPath>
     </Reference>
+    <Reference Include="LocalizationManager, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Libs\LocalizationManager.dll</HintPath>
+    </Reference>
     <Reference Include="ServerSync, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Libs\ServerSync.dll</HintPath>
@@ -90,6 +94,7 @@
     <EmbeddedResource Include="Assets\sail_original.png" />
     <EmbeddedResource Include="Assets\tent_original.png" />
     <EmbeddedResource Include="Assets\shields_original.png" />
+    <Content Include="Libs\LocalizationManager.dll" />
     <Content Include="Libs\ServerSync.dll" />
   </ItemGroup>
   <ItemGroup>
@@ -101,6 +106,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ILRepack.targets" />
+    <EmbeddedResource Include="translations\English.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="translations\Russian.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
