@@ -74,6 +74,7 @@ namespace LongshipUpgrades
         internal static ConfigEntry<string> turretsUpgradeRecipe;
 
         internal static ConfigEntry<bool> itemStandEnabled;
+        internal static ConfigEntry<bool> itemStandDisableSpeaking;
 
         internal static ConfigEntry<bool> mastEnabled;
         internal static ConfigEntry<bool> mastRemovable;
@@ -190,6 +191,7 @@ namespace LongshipUpgrades
             turretsStationRange = config("Turrets", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
             itemStandEnabled = config("Item stand", "Enabled", defaultValue: true, "Enable item stand on bow for trophy. Boss trophies brings an option to cast another Forsaken power while on ship.");
+            itemStandDisableSpeaking = config("Item stand", "Trophy speaking disabled", defaultValue: false, "Trophis will not do random speak. World restart or ship rebuild required to apply changes.");
 
             changeHead = config("Style", "Change heads", defaultValue: true, "Change ship's head style.");
             changeShields = config("Style", "Change shields color", defaultValue: true, "Change shields colors. World restart or ship rebuild required to apply changes.");
@@ -252,8 +254,8 @@ namespace LongshipUpgrades
             {
                 Directory.CreateDirectory(tents);
 
-                File.WriteAllBytes(Path.Combine(tents, "tent_1.png"), GetEmbeddedFileData("tent_1.png"));
-                File.WriteAllBytes(Path.Combine(tents, "tent_2.png"), GetEmbeddedFileData("tent_2.png"));
+                File.WriteAllBytes(Path.Combine(tents, "tent_01.png"), GetEmbeddedFileData("tent_01.png"));
+                File.WriteAllBytes(Path.Combine(tents, "tent_02.png"), GetEmbeddedFileData("tent_02.png"));
             }
 
             string sails = Path.Combine(configDirectory, sailsDirectory);
@@ -261,19 +263,19 @@ namespace LongshipUpgrades
             {
                 Directory.CreateDirectory(sails);
 
-                File.WriteAllBytes(Path.Combine(sails, "sail_1.png"), GetEmbeddedFileData("sail_1.png"));
-                File.WriteAllBytes(Path.Combine(sails, "sail_2.png"), GetEmbeddedFileData("sail_2.png"));
+                File.WriteAllBytes(Path.Combine(sails, "sail_01.png"), GetEmbeddedFileData("sail_01.png"));
+                File.WriteAllBytes(Path.Combine(sails, "sail_02.png"), GetEmbeddedFileData("sail_02.png"));
             }
 
             string shields = Path.Combine(configDirectory, shieldsDirectory);
 
-            foreach (FileInfo tent in new DirectoryInfo(tents).EnumerateFiles())
+            foreach (FileInfo tent in new DirectoryInfo(tents).EnumerateFiles().OrderBy(file => file.Name))
                 LongshipCustomizableParts.AddCustomTent(Path.Combine(tentsDirectory, tent.Name));
 
-            foreach (FileInfo sail in new DirectoryInfo(sails).EnumerateFiles())
+            foreach (FileInfo sail in new DirectoryInfo(sails).EnumerateFiles().OrderBy(file => file.Name))
                 LongshipCustomizableParts.AddCustomSail(Path.Combine(sailsDirectory, sail.Name));
 
-            foreach (FileInfo shield in new DirectoryInfo(shields).EnumerateFiles())
+            foreach (FileInfo shield in new DirectoryInfo(shields).EnumerateFiles().OrderBy(file => file.Name))
                 LongshipCustomizableParts.AddCustomShields(Path.Combine(shieldsDirectory, shield.Name));
         }
 
@@ -465,6 +467,44 @@ namespace LongshipUpgrades
 
                 if (m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_containerUpgradedLvl2) && __instance.m_height < containerHeight.Value)
                     __instance.m_height = containerHeight.Value;
+            }
+        }
+
+        private static bool IsBoxLadder(Ladder ladder)
+        {
+            return ladder.m_name == "$lu_box_name";
+        }
+
+        [HarmonyPatch(typeof(Ladder), nameof(Ladder.GetHoverText))]
+        public static class Ladder_GetHoverText_BoxClimb
+        {
+            public static bool Prefix(Ladder __instance, ref string __result)
+            {
+                if (!IsBoxLadder(__instance))
+                    return true;
+
+                if (__instance.InUseDistance(Player.m_localPlayer))
+                    __result = Localization.instance.Localize(__instance.m_name + "\n[<color=yellow><b>$KEY_Use</b></color>] $lu_box_climb");
+                else
+                    __result = "";
+                
+                return false;
+            }
+        }
+
+        [HarmonyPatch(typeof(Ladder), nameof(Ladder.Interact))]
+        public static class Ladder_Interact_BoxClimb
+        {
+            public static void Postfix(Ladder __instance, Humanoid character, bool hold)
+            {
+                if (!IsBoxLadder(__instance))
+                    return;
+
+                if (!hold && __instance.InUseDistance(character))
+                {
+                    character.SetMoveDir(__instance.m_targetPos.forward);
+                    character.UpdateWalking(Time.deltaTime);
+                }
             }
         }
     }

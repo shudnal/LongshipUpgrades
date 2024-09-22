@@ -35,6 +35,7 @@
     "lu_part_turrets_disable": "Деактивировать",
     "lu_part_turrets_upgrade": "Добавляет пару мини-турелей, которые стреляют болтами по врагам",
     "lu_controller_message_unknownupgrade": "Неизвестное улучшение",
-    "lu_controller_message_unknownitem": "Неизвестный предмет"
-
+    "lu_controller_message_unknownitem": "Неизвестный предмет",
+    "lu_box_name": "Ящик",
+    "lu_box_climb": "Залезть"
 }

@@ -35,5 +35,7 @@
     "lu_part_turrets_disable": "Deactivate",
     "lu_part_turrets_upgrade": "Adds a pair of mini-turrets that shoot bolts at enemies",
     "lu_controller_message_unknownupgrade": "Unknown upgrade",
-    "lu_controller_message_unknownitem": "Unknown item"
+    "lu_controller_message_unknownitem": "Unknown item",
+    "lu_box_name": "Box",
+    "lu_box_climb": "Climb"
 }

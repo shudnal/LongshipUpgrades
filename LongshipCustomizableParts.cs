@@ -20,6 +20,9 @@ namespace LongshipUpgrades
 
         private GameObject m_beamMast;
         private GameObject m_beamTent;
+        private GameObject m_beamMesh;
+        private GameObject m_beamTentCollider;
+        private GameObject m_beamSailCollider;
         private GameObject m_insects;
         private GameObject m_fireWarmth;
         private GameObject m_tent;
@@ -147,6 +150,7 @@ namespace LongshipUpgrades
 
             m_beamTent?.SetActive(m_customMast && (lanternEnabled.Value || tentEnabled.Value));
             m_beamMast?.SetActive(!m_mast.activeSelf && m_beamTent != null && m_beamTent.activeInHierarchy);
+            m_beamSailCollider?.SetActive((!m_beamMast || !m_beamMast.activeSelf) && m_mast.activeSelf);
 
             m_tent?.SetActive(m_customMast && tentEnabled.Value && m_zdo.GetBool(s_tentUpgraded) && !m_zdo.GetBool(s_tentDisabled));
             m_lantern?.SetActive(lanternEnabled.Value && m_customMast && m_zdo.GetBool(s_lanternUpgraded) && !m_zdo.GetBool(s_lanternDisabled));
@@ -172,6 +176,15 @@ namespace LongshipUpgrades
 
                 m_isLampLightDisabled = m_zdo.GetBool(s_lightsDisabled);
                 UpdateLights();
+            }
+
+            if (m_beamMesh)
+            {
+                m_beamMesh.transform.localPosition = new Vector3(0f, 0f, (m_tent && m_tent.activeInHierarchy) ? 0f : -0.9f);
+                m_beamMesh.transform.localScale = new Vector3(1f, 1f, (m_tent && m_tent.activeInHierarchy) ? 1f : 0.5f);
+
+                m_beamTentCollider.transform.localPosition = new Vector3(0f, 1.58f, (m_tent && m_tent.activeInHierarchy) ?  0.23f : -0.49f);
+                m_beamTentCollider.transform.localScale = new Vector3(0.16f, 0.16f, (m_tent && m_tent.activeInHierarchy) ? 2.05f : 0.6f);
             }
 
             if (containerEnabled.Value && m_storageUpgrade && m_containerUpgradedLvl2 != m_zdo.GetBool(s_containerUpgradedLvl2))
@@ -393,6 +406,63 @@ namespace LongshipUpgrades
                 m_containerPartsLvl1 = barrels.ToArray();
                 m_containerPartsLvl2 = boxes.ToArray();
                 m_protectiveParts = shields.ToArray();
+
+                UnityEngine.Random.State state = UnityEngine.Random.state;
+                UnityEngine.Random.InitState((int)m_zdo.m_uid.ID);
+
+                for (int i = 0; i < barrels.Count; i++)
+                {
+                    barrels[i].transform.localEulerAngles += new Vector3(0f, UnityEngine.Random.Range(0f, 360f), 0f);
+                    switch (i)
+                    {
+                        case 0:
+                            barrels[i].transform.localPosition = new Vector3(-0.69f, 0.18f, -0.88f);
+                            break;
+                        case 1:
+                            barrels[i].transform.localPosition = new Vector3(-0.36f, 0.18f, -0.87f);
+                            break;
+                    }
+                }
+
+                for (int i = 0; i < boxes.Count; i++)
+                {
+                    switch (i)
+                    {
+                        case 0:
+                        case 5:
+                            Transform targetPoint = new GameObject("ladder_TargetPoint").transform;
+                            targetPoint.SetParent(boxes[i].transform, worldPositionStays: false);
+                            targetPoint.localPosition = new Vector3(0.4f, 0.82f, 0f);
+                            targetPoint.localEulerAngles = new Vector3(0f, 270f, 0f);
+
+                            Ladder ladder = boxes[i].AddComponent<Ladder>();
+                            ladder.m_useDistance = 1.5f;
+                            ladder.m_targetPos = targetPoint;
+                            ladder.m_name = "$lu_box_name";
+                            continue;
+                        case 1:
+                            boxes[i].transform.localPosition = new Vector3(0.08f, 0f, -0.45f);
+                            break;
+                        case 3:
+                            boxes[i].transform.localPosition = new Vector3(0f, 0f, -0.84f);
+                            boxes[i].transform.localScale = new Vector3(0.35f, 0.4f, 0.35f);
+                            break;
+                        case 4:
+                            boxes[i].transform.localPosition = new Vector3(0.36f, -0.02f, -0.82f);
+                            boxes[i].transform.localScale = new Vector3(0.35f, 0.4f, 0.35f);
+                            break;
+                        case 6:
+                            boxes[i].transform.localPosition = new Vector3(0.00f, 0.26f, -0.57f);
+                            break;
+                        case 8:
+                            boxes[i].transform.localScale = new Vector3(0.35f, 0.4f, 0.35f);
+                            break;
+                    }
+
+                    boxes[i].transform.localEulerAngles += new Vector3(0f, UnityEngine.Random.Range(0f, 360f), 0f);
+                }
+
+                UnityEngine.Random.state = state;
             }
 
             Transform beam = customize.Find("ShipTen2_beam");
@@ -408,12 +478,14 @@ namespace LongshipUpgrades
                 m_beamTent = beam.gameObject;
                 m_beamTent.SetActive(false);
 
+                m_beamMesh = beam.GetComponentInChildren<Renderer>().gameObject;
+
                 Transform mastBeamCollider = AddCollider(m_beamMast.transform, "mast_beam", typeof(BoxCollider));
                 mastBeamCollider.localPosition = new Vector3(0f, 1.58f, -0.48f);
                 mastBeamCollider.localScale = new Vector3(0.16f, 0.16f, 2.5f);
 
                 Transform lanternBeamCollider = AddCollider(beam, "lantern_beam", typeof(BoxCollider));
-                lanternBeamCollider.localPosition = new Vector3(0f, 1.58f, -1.4f);
+                lanternBeamCollider.localPosition = new Vector3(0f, 1.58f, -1.41f);
                 lanternBeamCollider.localScale = new Vector3(0.16f, 0.16f, 0.8f);
 
                 Transform tentBeamCollider = AddCollider(beam, "tent_beam", typeof(BoxCollider));
@@ -423,6 +495,10 @@ namespace LongshipUpgrades
                 Transform sailBeamCollider = AddCollider(beam, "sail_beam", typeof(BoxCollider));
                 sailBeamCollider.localPosition = new Vector3(0f, 1.4f, -0.9f);
                 sailBeamCollider.localScale = new Vector3(0.23f, 0.55f, 0.2f);
+
+                m_beamTentCollider = tentBeamCollider.gameObject;
+
+                m_beamSailCollider = sailBeamCollider.gameObject;
 
                 if (lanternEnabled.Value)
                 {
@@ -738,13 +814,13 @@ namespace LongshipUpgrades
                 storageUpgradeCollider3.localEulerAngles = new Vector3(0, 4f, 0f);
 
                 Transform storageUpgradeCollider4 = AddCollider(shieldsParent, "shield_controller_left (1)", typeof(BoxCollider));
-                storageUpgradeCollider4.localPosition = new Vector3(-0.23f, 0.27f, -1.16f);
-                storageUpgradeCollider4.localScale = new Vector3(0.92f, 0.45f, 0.05f);
+                storageUpgradeCollider4.localPosition = new Vector3(-0.25f, 0.27f, -1.16f);
+                storageUpgradeCollider4.localScale = new Vector3(0.89f, 0.45f, 0.05f);
                 storageUpgradeCollider4.localEulerAngles = new Vector3(0, 2f, 0f);
 
                 Transform storageUpgradeCollider5 = AddCollider(shieldsParent, "shield_controller_left (2)", typeof(BoxCollider));
-                storageUpgradeCollider5.localPosition = new Vector3(1.3f, 0.23f, -1.1f);
-                storageUpgradeCollider5.localScale = new Vector3(1.4f, 0.45f, 0.05f);
+                storageUpgradeCollider5.localPosition = new Vector3(1.33f, 0.23f, -1.1f);
+                storageUpgradeCollider5.localScale = new Vector3(1.37f, 0.45f, 0.05f);
                 storageUpgradeCollider5.localEulerAngles = new Vector3(0, 352f, 0f);
 
                 if (changeShields.Value)
@@ -943,6 +1019,9 @@ namespace LongshipUpgrades
 
                 Destroy(component);
 
+                if (itemStandDisableSpeaking.Value)
+                    m_itemstandObject.GetComponentInChildren<RandomSpeak>()?.gameObject.SetActive(false);
+
                 // Stand Awake call
                 m_itemstandObject.SetActive(true);
             }
@@ -950,6 +1029,8 @@ namespace LongshipUpgrades
             // TODO
             // recipe balance
             // move barrel
+            // reduce beam without tent
+            // switch sounds
         }
 
         public void OnDestroyed()
