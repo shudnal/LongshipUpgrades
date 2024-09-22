@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /package/thunderstore/LongshipUpgrades/LongshipUpgrades.dll
 /package/thunderstore/LongshipUpgrades.zip
+/package/thunderstore/LongshipUpgrades/English.json
