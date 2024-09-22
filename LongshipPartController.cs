@@ -221,6 +221,10 @@ namespace LongshipUpgrades
 
         public int m_variants;
 
+        public EffectList m_switchEffects = new EffectList();
+        public EffectList m_enableEffects = new EffectList();
+        public EffectList m_disableEffects = new EffectList();
+
         private static readonly StringBuilder sb = new StringBuilder(20);
         private static Recipe tempRecipe;
         private static readonly List<CraftingStation> craftingStations = new List<CraftingStation>();
@@ -318,6 +322,7 @@ namespace LongshipUpgrades
             if (m_zdoPartVariant != 0 && m_variants > 1)
             {
                 zdo.Set(m_zdoPartVariant, (zdo.GetInt(m_zdoPartVariant) + 1) % m_variants);
+                m_switchEffects?.Create(base.transform.position, base.transform.rotation);
                 return true;
             }
 
@@ -325,6 +330,7 @@ namespace LongshipUpgrades
                 return false;
 
             zdo.Set(m_zdoPartDisabled, !zdo.GetBool(m_zdoPartDisabled));
+            (zdo.GetBool(m_zdoPartDisabled) ? m_disableEffects : m_enableEffects)?.Create(base.transform.position, base.transform.rotation);
             return true;
         }
 
