@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -341,7 +342,11 @@ namespace LongshipUpgrades
             m_visualItem = Instantiate(attachGameObject, attach.position, attach.rotation, attach);
             m_visualItem.transform.localPosition = attachPrefab.transform.localPosition;
             m_visualItem.transform.localRotation = attachPrefab.transform.localRotation;
+
             m_visualItem.transform.localScale = Vector3.Scale(attachPrefab.transform.localScale, component.m_itemData.GetScale(quality));
+            if (TryFindScaleOverride(itemName, out float scale))
+                m_visualItem.transform.localScale = Vector3.one * scale;
+
             m_visualItem.GetComponentInChildren<IEquipmentVisual>()?.Setup(m_visualVariant);
 
             m_visualItem.GetComponentsInChildren<Collider>().DoIf(collider => collider.enabled && !collider.isTrigger, Destroy);
@@ -360,6 +365,22 @@ namespace LongshipUpgrades
         public string GetAttachedItem()
         {
             return m_nview.IsValid() ? m_nview.GetZDO().GetString(ZDOVars.s_item) : "";
+        }
+
+        internal static bool TryFindScaleOverride(string itemName, out float scale)
+        {
+            foreach (string rescale in LongshipUpgrades.itemStandTrophyRescale.Value.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string[] req = rescale.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
+                if (req.Length != 2)
+                    continue;
+
+                if (req[0] == itemName && float.TryParse(req[1], out scale))
+                    return true;
+            };
+
+            scale = 0f;
+            return false;
         }
 
         public static GameObject GetAttachPrefab(GameObject item)

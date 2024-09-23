@@ -330,7 +330,7 @@ namespace LongshipUpgrades
                     renderer.GetPropertyBlock(s_materialBlock);
                     s_materialBlock.SetTexture("_MainTex", customSails[(m_sailStyle - 1) % (maxSails.Value == 0 ? customSails.Count : Math.Min(maxSails.Value, customSails.Count))]);
                     renderer.SetPropertyBlock(s_materialBlock);
-                }
+            }
             }
 
             if (changeHead.Value && m_heads != null && m_wnt && m_headStyle != m_zdo.GetInt(s_headStyle))
@@ -1022,7 +1022,7 @@ namespace LongshipUpgrades
                 Destroy(plate.GetComponent<MeshCollider>());
                 
                 Transform attach = itemstand.transform.Find("attach_trophie");
-                attach.localPosition = new Vector3(0f, -0.21f, -0.02f);
+                attach.localPosition = Vector3.zero;
                 attach.localScale = Vector3.one * 0.75f;
                 attach.gameObject.layer = piece_nonsolid;
 
@@ -1057,6 +1057,8 @@ namespace LongshipUpgrades
 
             // TODO
             // recipe balance
+            // trophy rescale
+            // check multiplayer
         }
 
         public void OnDestroyed()
