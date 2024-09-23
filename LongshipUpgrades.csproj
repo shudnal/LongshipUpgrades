@@ -37,6 +37,7 @@
   <ItemGroup>
     <Compile Include="LongshipCustomizableParts.cs" />
     <Compile Include="LongshipPartController.cs" />
+    <Compile Include="LongshipPropertyBlocks.cs" />
     <Compile Include="LongshipUpgrades.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShipTrophyStand.cs" />

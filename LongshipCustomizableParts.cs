@@ -62,14 +62,18 @@ namespace LongshipUpgrades
         private int m_tentStyle;
         private int m_sailStyle;
 
-        public GameObject m_destroyedLootPrefab;
+        private GameObject m_destroyedLootPrefab;
 
         public const string prefabName = "VikingShip";
         public const string turretName = "piece_turret";
         public const string moderBossStone = "BossStone_DragonQueen";
         private static bool prefabFixed = false;
 
-        private static Material lampSharedMaterial;
+        private static Shader shaderStandard;
+        private static Material standSharedMaterial;
+        private static Material storageSharedMaterial;
+        private static Material plankSharedMaterial;
+
         private static Color flareColor;
         private static bool isNightTime;
         private static bool isTimeToLight = true;
@@ -88,15 +92,17 @@ namespace LongshipUpgrades
         public static readonly int s_healthUpgraded = "HealthUpgraded".GetStableHashCode();
         public static readonly int s_ashlandsUpgraded = "AshlandsUpgraded".GetStableHashCode();
 
-        public static readonly int s_turretsUpgraded = "turretsUpgraded".GetStableHashCode();
-        public static readonly int s_turretsDisabled = "turretsDisabled".GetStableHashCode();
+        public static readonly int s_turretsUpgraded = "TurretsUpgraded".GetStableHashCode();
+        public static readonly int s_turretsDisabled = "TurretsDisabled".GetStableHashCode();
 
         public static readonly int s_headStyle = "HeadStyle".GetStableHashCode();
         public static readonly int s_shieldsStyle = "ShieldsStyle".GetStableHashCode();
         public static readonly int s_tentStyle = "TentStyle".GetStableHashCode();
         public static readonly int s_sailStyle = "SailStyle".GetStableHashCode();
 
-        public static readonly MaterialPropertyBlock s_materialBlock = new MaterialPropertyBlock();
+        public bool blocksIsDirty;
+        public readonly Dictionary<Renderer, MaterialPropertyBlock> s_propertyBlocks = new Dictionary<Renderer, MaterialPropertyBlock>();
+
         public static Texture2D s_ashlandsHull = new Texture2D(2, 2);
 
         public const int piece_nonsolid = 16;
@@ -112,6 +118,8 @@ namespace LongshipUpgrades
         public static EffectList lampDisableEffects = new EffectList();
         public static EffectList turretsEnableEffects = new EffectList();
         public static EffectList turretsDisableEffects = new EffectList();
+
+        private static readonly Dictionary<GameObject, LongshipCustomizableParts> s_allInstances = new Dictionary<GameObject, LongshipCustomizableParts>();
 
         private void Awake()
         {
@@ -133,6 +141,8 @@ namespace LongshipUpgrades
                 m_wnt.m_onDestroyed = (Action)Delegate.Combine(m_wnt.m_onDestroyed, new Action(OnDestroyed));
 
             CheckEffects();
+
+            s_allInstances.Add(base.gameObject, this);
         }
 
         private void Start()
@@ -141,6 +151,14 @@ namespace LongshipUpgrades
                 return;
 
             InitializeParts();
+        }
+
+        public void OnDestroy()
+        {
+            if (prefabInit)
+                return;
+
+            s_allInstances.Remove(base.gameObject);
         }
 
         private void FixedUpdate()
@@ -246,29 +264,10 @@ namespace LongshipUpgrades
 
                         m_wnt.m_ashDamageResist = true;
                         m_wnt.m_damages.Apply(new List<HitData.DamageModPair> { new HitData.DamageModPair() { m_type = HitData.DamageType.Fire, m_modifier = HitData.DamageModifier.VeryResistant } });
-
-                        foreach (Renderer renderer in new List<Renderer> {
-                                                            m_wnt.m_new.transform.Find("hull").gameObject.GetComponent<Renderer>(),
-                                                            m_wnt.m_worn.transform.Find("hull").gameObject.GetComponent<Renderer>(),
-                                                            m_wnt.m_new.transform.Find("skull_head").gameObject.GetComponent<Renderer>(),
-                                                            m_wnt.m_worn.transform.Find("skull_head").gameObject.GetComponent<Renderer>()})
-                        {
-                            renderer.GetPropertyBlock(s_materialBlock);
-                            s_materialBlock.SetTexture("_MainTex", s_ashlandsHull);
-                            renderer.SetPropertyBlock(s_materialBlock);
-                        }
-
-                        if (m_heads != null)
-                        {
-                            foreach (Renderer renderer in m_heads.Select(head => head.GetComponent<Renderer>()))
-                            {
-                                renderer.GetPropertyBlock(s_materialBlock);
-                                s_materialBlock.SetTexture("_MainTex", s_ashlandsHull);
-                                renderer.SetPropertyBlock(s_materialBlock);
-                            }
-                        }
                     }
                 }
+
+                UpdateHullPropertyBlocks();
             }
 
             m_healthUpgrade?.SetActive(healthEnabled.Value && !m_ashlandsUpgraded);
@@ -282,19 +281,7 @@ namespace LongshipUpgrades
                     m_zdo.Set(s_shieldsStyle, m_shieldsStyle);
                 }
 
-                int style = m_shieldsStyle > 3 ? (m_shieldsStyle - 1) % 3 + 1 : m_shieldsStyle;
-                int texId = m_shieldsStyle > 3 ? (m_shieldsStyle - 4) / 3 : -1;
-                foreach (GameObject part in m_protectiveParts)
-                {
-                    s_materialBlock.Clear();
-                    s_materialBlock.SetInt("_Style", style);
-
-                    Renderer renderer = part.GetComponent<Renderer>();
-                    if (-1 < texId && texId < customShields.Count)
-                        s_materialBlock.SetTexture("_StyleTex", customShields[texId]);
-
-                    renderer.SetPropertyBlock(s_materialBlock);
-                }
+                UpdateShieldsPropertyBlocks();
             }
 
             m_shieldsStyles?.SetActive(m_healthUpgraded);
@@ -303,34 +290,14 @@ namespace LongshipUpgrades
             {
                 m_tentStyle = m_zdo.GetInt(s_tentStyle);
 
-                Renderer renderer = m_tent.GetComponentInChildren<Renderer>();
-                if (m_tentStyle == 0 || customTents.Count == 0)
-                {
-                    renderer.SetPropertyBlock(null);
-                }
-                else
-                {
-                    renderer.GetPropertyBlock(s_materialBlock);
-                    s_materialBlock.SetTexture("_MainTex", customTents[(m_tentStyle - 1) % (maxTents.Value == 0 ? customTents.Count : Math.Min(maxTents.Value, customTents.Count))]);
-                    renderer.SetPropertyBlock(s_materialBlock);
-                }
+                UpdateTentPropertyBlocks();
             }
 
             if (changeSail.Value && m_sail != null && m_sail.activeInHierarchy && m_sailStyle != m_zdo.GetInt(s_sailStyle))
             {
                 m_sailStyle = m_zdo.GetInt(s_sailStyle);
 
-                Renderer renderer = m_sail.GetComponentInChildren<Renderer>();
-                if (m_sailStyle == 0 || customSails.Count == 0)
-                {
-                    renderer.SetPropertyBlock(null);
-                }
-                else
-                {
-                    renderer.GetPropertyBlock(s_materialBlock);
-                    s_materialBlock.SetTexture("_MainTex", customSails[(m_sailStyle - 1) % (maxSails.Value == 0 ? customSails.Count : Math.Min(maxSails.Value, customSails.Count))]);
-                    renderer.SetPropertyBlock(s_materialBlock);
-            }
+                UpdateSailPropertyBlocks();
             }
 
             if (changeHead.Value && m_heads != null && m_wnt && m_headStyle != m_zdo.GetInt(s_headStyle))
@@ -346,6 +313,82 @@ namespace LongshipUpgrades
             }
 
             m_headStyles?.SetActive(changeHead.Value);
+
+            SetPropertyBlocks();
+        }
+
+        private void UpdateSailPropertyBlocks()
+        {
+            Renderer renderer = m_sail.GetComponentInChildren<Renderer>();
+            if (m_sailStyle == 0 || customSails.Count == 0)
+                ResetPropertyBlock(renderer);
+            else
+                SetPropertyBlock(renderer, ShaderProps._MainTex, customSails[(m_sailStyle - 1) % (maxSails.Value == 0 ? customSails.Count : Math.Min(maxSails.Value, customSails.Count))]);
+        }
+
+        private void UpdateTentPropertyBlocks()
+        {
+            Renderer renderer = m_tent.GetComponentInChildren<Renderer>();
+            if (m_tentStyle == 0 || customTents.Count == 0)
+                ResetPropertyBlock(renderer);
+            else
+                SetPropertyBlock(renderer, ShaderProps._MainTex, customTents[(m_tentStyle - 1) % (maxTents.Value == 0 ? customTents.Count : Math.Min(maxTents.Value, customTents.Count))]);
+        }
+
+        private void UpdateHullPropertyBlocks()
+        {
+            if (m_ashlandsUpgraded && healthUpgradeLvl2.Value > 0)
+            {
+                if (ashlandsProtection.Value)
+                {
+                    foreach (Renderer renderer in new List<Renderer> {
+                                                            m_wnt.m_new.transform.Find("hull").gameObject.GetComponent<Renderer>(),
+                                                            m_wnt.m_worn.transform.Find("hull").gameObject.GetComponent<Renderer>(),
+                                                            m_wnt.m_new.transform.Find("skull_head").gameObject.GetComponent<Renderer>(),
+                                                            m_wnt.m_worn.transform.Find("skull_head").gameObject.GetComponent<Renderer>()})
+                    {
+                        SetPropertyBlock(renderer, ShaderProps._MainTex, s_ashlandsHull);
+                    }
+
+                    if (m_heads != null)
+                        foreach (Renderer renderer in m_heads.Select(head => head.GetComponent<Renderer>()))
+                            SetPropertyBlock(renderer, ShaderProps._MainTex, s_ashlandsHull);
+                }
+            }
+
+        }
+
+        private void UpdateShieldsPropertyBlocks()
+        {
+            if (changeShields.Value && healthEnabled.Value && m_protectiveParts != null && m_healthUpgraded)
+            {
+                int style = m_shieldsStyle > 3 ? (m_shieldsStyle - 1) % 3 + 1 : m_shieldsStyle;
+                int texId = m_shieldsStyle > 3 ? (m_shieldsStyle - 4) / 3 : -1;
+                foreach (Renderer renderer in m_protectiveParts.Select(head => head.GetComponent<Renderer>()))
+                {
+                    ResetPropertyBlock(renderer);
+                    SetPropertyBlock(renderer, ShaderProps._Style, style);
+
+                    if (-1 < texId && texId < customShields.Count)
+                        SetPropertyBlock(renderer, LongshipPropertyBlocks._StyleTex, customShields[texId]);
+                }
+            }
+        }
+
+        private void UpdatePropertyBlocks()
+        {
+            s_propertyBlocks.Keys.Do(renderer => renderer.SetPropertyBlock(null));
+            s_propertyBlocks.Clear();
+
+            UpdateHullPropertyBlocks();
+
+            UpdateShieldsPropertyBlocks();
+
+            UpdateTentPropertyBlocks();
+
+            UpdateSailPropertyBlocks();
+
+            SetPropertyBlocks();
         }
 
         private void UpdateLights()
@@ -367,11 +410,73 @@ namespace LongshipUpgrades
             }
 
             if (m_lampRenderer)
+                SetPropertyBlock(m_lampRenderer, ShaderProps._EmissionColor, m_isLampLightDisabled ? Color.grey : Color.white + onlyColor);
+        }
+
+        private void SetPropertyBlock(Renderer renderer, int nameID, Texture2D tex)
+        {
+            GetPropertyBlock(renderer).SetTexture(nameID, tex);
+        }
+
+        private void SetPropertyBlock(Renderer renderer, int nameID, int style)
+        {
+            GetPropertyBlock(renderer).SetInt(nameID, style);
+        }
+
+        private void SetPropertyBlock(Renderer renderer, int nameID, Color color)
+        {
+            GetPropertyBlock(renderer).SetColor(nameID, color);
+        }
+
+        private void ResetPropertyBlock(Renderer renderer)
+        {
+            if (!s_propertyBlocks.ContainsKey(renderer))
+                return;
+
+            renderer.SetPropertyBlock(null);
+            s_propertyBlocks.Remove(renderer);
+            blocksIsDirty = true;
+        }
+
+        private MaterialPropertyBlock GetPropertyBlock(Renderer renderer)
+        {
+            blocksIsDirty = true;
+
+            if (!s_propertyBlocks.TryGetValue(renderer, out MaterialPropertyBlock propertyBlock))
             {
-                m_lampRenderer.GetPropertyBlock(s_materialBlock);
-                s_materialBlock.SetColor("_EmissionColor", m_isLampLightDisabled ? Color.grey : Color.white + onlyColor);
-                m_lampRenderer.SetPropertyBlock(s_materialBlock);
+                propertyBlock = new MaterialPropertyBlock();
+                s_propertyBlocks[renderer] = propertyBlock;
             }
+
+            return propertyBlock;
+        }
+
+        private void CombinePropertyBlocks(MaterialPropertyBlock propertyBlockToCombine)
+        {
+            foreach (MaterialPropertyBlock matBlock in s_propertyBlocks.Values)
+            {
+                if (propertyBlockToCombine.HasColor(ShaderProps._Color))
+                {
+                    matBlock.SetColor(ShaderProps._Color, propertyBlockToCombine.GetColor(ShaderProps._Color));
+                    blocksIsDirty = true;
+                }
+                    
+                if (propertyBlockToCombine.HasColor(ShaderProps._EmissionColor))
+                {
+                    matBlock.SetColor(ShaderProps._EmissionColor, propertyBlockToCombine.GetColor(ShaderProps._EmissionColor));
+                    blocksIsDirty = true;
+                }
+            }
+
+            SetPropertyBlocks();
+        }
+
+        private void SetPropertyBlocks()
+        {
+            if (blocksIsDirty)
+                s_propertyBlocks.Do(rendererBlock => rendererBlock.Key.SetPropertyBlock(rendererBlock.Value.isEmpty ? null : rendererBlock.Value));
+
+            blocksIsDirty = false;
         }
 
         private void InitializeParts()
@@ -628,11 +733,6 @@ namespace LongshipUpgrades
                     flareColor = m_flare.main.startColor.color;
 
                 m_lampRenderer = lantern.Find("default").GetComponent<MeshRenderer>();
-
-                if (lampSharedMaterial == null)
-                    lampSharedMaterial = new Material(m_lampRenderer.sharedMaterial);
-
-                m_lampRenderer.sharedMaterial = lampSharedMaterial;
 
                 ConfigurableJoint joint = lantern.GetComponent<ConfigurableJoint>();
                 joint.autoConfigureConnectedAnchor = false;
@@ -1020,7 +1120,17 @@ namespace LongshipUpgrades
                 plate.localScale = Vector3.one * 0.3f;
                 plate.gameObject.layer = piece_nonsolid;
                 Destroy(plate.GetComponent<MeshCollider>());
-                
+
+                MeshRenderer plateRenderer = plate.GetComponent<MeshRenderer>();
+                if (standSharedMaterial == null)
+                {
+                    standSharedMaterial = new Material(plateRenderer.sharedMaterial)
+                    {
+                        shader = shaderStandard
+                    };
+                }
+                plateRenderer.sharedMaterial = standSharedMaterial;
+
                 Transform attach = itemstand.transform.Find("attach_trophie");
                 attach.localPosition = Vector3.zero;
                 attach.localScale = Vector3.one * 0.75f;
@@ -1057,7 +1167,6 @@ namespace LongshipUpgrades
 
             // TODO
             // recipe balance
-            // trophy rescale
             // check multiplayer
         }
 
@@ -1194,7 +1303,13 @@ namespace LongshipUpgrades
 
         internal static void OnGlobalDestroy()
         {
-            lampSharedMaterial = null;
+            Destroy(standSharedMaterial);
+            Destroy(storageSharedMaterial);
+            Destroy(plankSharedMaterial);
+
+            standSharedMaterial = null;
+            storageSharedMaterial = null;
+            plankSharedMaterial = null;
         }
 
         private static void FixPrefab()
@@ -1208,12 +1323,36 @@ namespace LongshipUpgrades
             if (prefab == null)
                 return;
 
-            Shader standard = prefab.transform.Find("ship/visual/Customize/TraderLamp/fi_vil_light_lamp01_03").GetComponent<MeshRenderer>().sharedMaterial.shader;
-
             // Flickering fix
-            prefab.transform.Find("ship/visual/Customize/storage/default (4)").GetComponent<MeshRenderer>().sharedMaterial.shader = standard;
-            prefab.transform.Find("ship/visual/hull_worn/plank").GetComponent<MeshRenderer>().sharedMaterial.shader = standard;
+            shaderStandard = prefab.transform.Find("ship/visual/Customize/TraderLamp/fi_vil_light_lamp01_03").GetComponent<MeshRenderer>().sharedMaterial.shader;
+
+            Transform storage = prefab.transform.Find("ship/visual/Customize/storage");
+            for (int i = 0; i < storage.childCount; i++)
+            {
+                Transform child = storage.GetChild(i);
+                if (!child.name.StartsWith("default"))
+                    continue;
+
+                MeshRenderer renderer = child.GetComponent<MeshRenderer>();
+
+                if (storageSharedMaterial == null)
+                    storageSharedMaterial = new Material(renderer.sharedMaterial)
+                    {
+                        shader = shaderStandard
+                    };
+
+                renderer.sharedMaterial = storageSharedMaterial;
+            }
             
+            MeshRenderer plankRenderer = prefab.transform.Find("ship/visual/hull_worn/plank").GetComponent<MeshRenderer>();
+            if (plankSharedMaterial == null)
+                plankSharedMaterial = new Material(plankRenderer.sharedMaterial)
+                {
+                    shader = shaderStandard
+                };
+            plankRenderer.sharedMaterial = plankSharedMaterial;
+            prefab.transform.Find("ship/visual/hull_worn/plank (1)").GetComponent<MeshRenderer>().sharedMaterial = plankSharedMaterial;
+
             Transform beam = prefab.transform.Find("ship/visual/Customize/ShipTen2_beam");
             beam.localPosition += new Vector3(0f, 0.1f, 0f);
             beam.gameObject.layer = vehicle;
@@ -1300,6 +1439,23 @@ namespace LongshipUpgrades
                     }
                 };
             }
+        }
+
+        internal static void UpdatePropertyBlocks(GameObject go)
+        {
+            if (s_allInstances.TryGetValue(go, out LongshipCustomizableParts instance))
+                instance.UpdatePropertyBlocks();
+        }
+
+        internal static void CombinePropertyBlocks(GameObject go, MaterialPropertyBlock propertyBlockToCombine)
+        {
+            if (s_allInstances.TryGetValue(go, out LongshipCustomizableParts instance))
+                instance.CombinePropertyBlocks(propertyBlockToCombine);
+        }
+
+        internal static bool HasComponent(GameObject go)
+        {
+            return s_allInstances.ContainsKey(go);
         }
     }
 }

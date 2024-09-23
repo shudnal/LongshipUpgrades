@@ -204,7 +204,7 @@ namespace LongshipUpgrades
             else
             {
                 UpdateTarget(fixedDeltaTime);
-                UpdateAttack(fixedDeltaTime);
+                UpdateAttack();
             }
         }
 
@@ -335,12 +335,10 @@ namespace LongshipUpgrades
             }
         }
 
-        public void UpdateAttack(float dt)
+        public void UpdateAttack()
         {
             if ((bool)m_target && !(m_aimDiffToTarget < m_shootWhenAimDiff) && HasAmmoAndEnabled() && !IsCoolingDown())
-            {
                 ShootProjectile();
-            }
         }
 
         public void ShootProjectile()
@@ -365,23 +363,26 @@ namespace LongshipUpgrades
                 Quaternion quaternion = Quaternion.AngleAxis(UnityEngine.Random.Range(0f - projectileAccuracy, projectileAccuracy), Vector3.up);
                 forward = Quaternion.AngleAxis(UnityEngine.Random.Range(0f - projectileAccuracy, projectileAccuracy), axis) * forward;
                 forward = quaternion * forward;
-                m_lastProjectile = UnityEngine.Object.Instantiate(m_lastAmmo.m_shared.m_attack.m_attackProjectile, transform.position, transform.rotation);
-                HitData hitData = new HitData();
-                hitData.m_toolTier = (short)m_lastAmmo.m_shared.m_toolTier;
-                hitData.m_pushForce = m_lastAmmo.m_shared.m_attackForce;
-                hitData.m_backstabBonus = m_lastAmmo.m_shared.m_backstabBonus;
-                hitData.m_staggerMultiplier = m_lastAmmo.m_shared.m_attack.m_staggerMultiplier;
-                hitData.m_damage.Add(m_lastAmmo.GetDamage());
-                hitData.m_statusEffectHash = (m_lastAmmo.m_shared.m_attackStatusEffect ? m_lastAmmo.m_shared.m_attackStatusEffect.NameHash() : 0);
-                hitData.m_blockable = m_lastAmmo.m_shared.m_blockable;
-                hitData.m_dodgeable = m_lastAmmo.m_shared.m_dodgeable;
-                hitData.m_skill = m_lastAmmo.m_shared.m_skillType;
-                hitData.m_itemWorldLevel = (byte)Game.m_worldLevel;
-                hitData.m_hitType = HitData.HitType.Turret;
-                if (m_lastAmmo.m_shared.m_attackStatusEffect != null)
+                m_lastProjectile = Instantiate(m_lastAmmo.m_shared.m_attack.m_attackProjectile, transform.position, transform.rotation);
+                
+                HitData hitData = new HitData
                 {
+                    m_toolTier = (short)m_lastAmmo.m_shared.m_toolTier,
+                    m_pushForce = m_lastAmmo.m_shared.m_attackForce,
+                    m_backstabBonus = m_lastAmmo.m_shared.m_backstabBonus,
+                    m_staggerMultiplier = m_lastAmmo.m_shared.m_attack.m_staggerMultiplier,
+                    m_statusEffectHash = (m_lastAmmo.m_shared.m_attackStatusEffect ? m_lastAmmo.m_shared.m_attackStatusEffect.NameHash() : 0),
+                    m_blockable = m_lastAmmo.m_shared.m_blockable,
+                    m_dodgeable = m_lastAmmo.m_shared.m_dodgeable,
+                    m_skill = m_lastAmmo.m_shared.m_skillType,
+                    m_itemWorldLevel = (byte)Game.m_worldLevel,
+                    m_hitType = HitData.HitType.Turret
+                };
+
+                hitData.m_damage.Add(m_lastAmmo.GetDamage());
+
+                if (m_lastAmmo.m_shared.m_attackStatusEffect != null)
                     hitData.m_statusEffectHash = m_lastAmmo.m_shared.m_attackStatusEffect.NameHash();
-                }
 
                 m_lastProjectile.GetComponent<IProjectile>()?.Setup(null, forward * m_lastAmmo.m_shared.m_attack.m_projectileVel, m_hitNoise, hitData, null, m_lastAmmo);
             }
@@ -703,7 +704,7 @@ namespace LongshipUpgrades
         public Inventory SpawnContainer(GameObject lootContainerPrefab)
         {
             Vector3 position = base.transform.position + UnityEngine.Random.insideUnitSphere * 1f;
-            return UnityEngine.Object.Instantiate(lootContainerPrefab, position, UnityEngine.Random.rotation).GetComponent<Container>().GetInventory();
+            return Instantiate(lootContainerPrefab, position, UnityEngine.Random.rotation).GetComponent<Container>().GetInventory();
         }
 
         public void SetTargets()
