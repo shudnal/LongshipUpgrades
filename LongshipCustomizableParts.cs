@@ -1164,10 +1164,6 @@ namespace LongshipUpgrades
                 // Stand Awake call
                 m_itemstandObject.SetActive(true);
             }
-
-            // TODO
-            // recipe balance
-            // check multiplayer
         }
 
         public void OnDestroyed()
