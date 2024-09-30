@@ -319,7 +319,10 @@ namespace LongshipUpgrades
 
         private void UpdateSailPropertyBlocks()
         {
-            Renderer renderer = m_sail.GetComponentInChildren<Renderer>();
+            Renderer renderer = m_sail?.GetComponentInChildren<Renderer>();
+            if (renderer == null)
+                return;
+
             if (m_sailStyle == 0 || customSails.Count == 0)
                 ResetPropertyBlock(renderer);
             else
@@ -328,7 +331,10 @@ namespace LongshipUpgrades
 
         private void UpdateTentPropertyBlocks()
         {
-            Renderer renderer = m_tent.GetComponentInChildren<Renderer>();
+            Renderer renderer = m_tent?.GetComponentInChildren<Renderer>();
+            if (renderer == null)
+                return;
+
             if (m_tentStyle == 0 || customTents.Count == 0)
                 ResetPropertyBlock(renderer);
             else
@@ -395,8 +401,11 @@ namespace LongshipUpgrades
         {
             m_insects?.SetActive(isNightTime && !m_isLampLightDisabled);
 
-            m_light.gameObject.SetActive(!m_isLampLightDisabled);
-            m_light.color = lanternLightColor.Value;
+            if (m_light)
+            {
+                m_light.gameObject.SetActive(!m_isLampLightDisabled);
+                m_light.color = lanternLightColor.Value;
+            }
 
             Color onlyColor = lanternLightColor.Value;
             onlyColor.a = 0f;
@@ -415,16 +424,25 @@ namespace LongshipUpgrades
 
         private void SetPropertyBlock(Renderer renderer, int nameID, Texture2D tex)
         {
+            if (renderer == null)
+                return;
+
             GetPropertyBlock(renderer).SetTexture(nameID, tex);
         }
 
         private void SetPropertyBlock(Renderer renderer, int nameID, int style)
         {
+            if (renderer == null)
+                return;
+
             GetPropertyBlock(renderer).SetInt(nameID, style);
         }
 
         private void SetPropertyBlock(Renderer renderer, int nameID, Color color)
         {
+            if (renderer == null)
+                return;
+
             GetPropertyBlock(renderer).SetColor(nameID, color);
         }
 
@@ -481,9 +499,9 @@ namespace LongshipUpgrades
 
         private void InitializeParts()
         {
-            m_mast = transform.Find("ship/visual/Mast").gameObject;
-            m_ropes = transform.Find("ship/visual/ropes").gameObject;
-            m_sail = transform.Find("ship/visual/Mast/Sail/sail_full").gameObject;
+            m_mast = transform.Find("ship/visual/Mast")?.gameObject;
+            m_ropes = transform.Find("ship/visual/ropes")?.gameObject;
+            m_sail = transform.Find("ship/visual/Mast/Sail/sail_full")?.gameObject;
 
             Transform customize = transform.Find("ship/visual/Customize");
             if (!customize)
@@ -491,11 +509,11 @@ namespace LongshipUpgrades
 
             customize.gameObject.SetActive(true);
 
-            m_holdersRight = customize.Find("ShipTentHolders").gameObject;
-            m_holdersLeft = customize.Find("ShipTentHolders (1)").gameObject;
+            m_holdersRight = customize.Find("ShipTentHolders")?.gameObject;
+            m_holdersLeft = customize.Find("ShipTentHolders (1)")?.gameObject;
 
-            m_holdersRight.SetActive(false);
-            m_holdersLeft.SetActive(false);
+            m_holdersRight?.SetActive(false);
+            m_holdersLeft?.SetActive(false);
 
             Transform storage = customize.Find("storage");
             if (storage)
