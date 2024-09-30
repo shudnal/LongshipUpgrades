@@ -102,7 +102,7 @@ You will need to rename the files you copy because all of them has the same name
 Voila.
 
 ## Localization
-To add your own localization create a file with the name LongshipUpgrades.LanguageName.yml or LongshipUpgrades.LanguageName.json anywhere inside of the Bepinex folder. For example, to add a French translation you could create a LongshipUpgrades.French.yml file inside of the config folder and add French translations there.
+To add your own localization create a file with the name **Longship Upgrades.LanguageName.yml** or **Longship Upgrades.LanguageName.json** anywhere inside of the Bepinex folder. For example, to add a French translation you could create a **Longship Upgrades.French.yml** file inside of the config folder and add French translations there.
 
 Localization file will be loaded on the next game launch or on the next language change.
 
