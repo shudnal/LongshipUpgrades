@@ -16,7 +16,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.1";
+        public const string pluginVersion = "1.0.2";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -26,6 +26,8 @@ namespace LongshipUpgrades
 
         internal static ConfigEntry<bool> configLocked;
         internal static ConfigEntry<bool> loggingEnabled;
+        internal static ConfigEntry<bool> onlyCreatorUpgrades;
+        internal static ConfigEntry<bool> onlyCreatorStand;
 
         internal static ConfigEntry<Color> hintStationColor;
         internal static ConfigEntry<Color> hintColor;
@@ -129,7 +131,9 @@ namespace LongshipUpgrades
 
             configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only.");
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging. [Not Synced with Server]", false);
-            
+            onlyCreatorUpgrades = config("General", "Only creator can upgrade ship", defaultValue: true, "Only ship's creator can upgrade it.");
+            onlyCreatorStand = config("General", "Only creator can change trophy", defaultValue: true, "Only ship's creator can put and get trophy from stand.");
+
             hintStationColor = config("Hint", "Station color", defaultValue: new Color(0.75f, 1f, 0.75f, 1f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
             hintColor = config("Hint", "Hint color", defaultValue: new Color(0.678f, 0.847f, 0.902f, 1f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
             hintAmountColor = config("Hint", "Entry amount color", defaultValue: Color.yellow, "Color for amount. [Not Synced with Server]", false);

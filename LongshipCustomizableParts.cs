@@ -757,6 +757,8 @@ namespace LongshipUpgrades
                 joint.connectedBody = GetComponent<Rigidbody>();
                 joint.connectedAnchor = new Vector3(0f, 3.01f, -0.45f);
 
+                lantern.GetComponent<CapsuleCollider>().height = 0.44f;
+
                 Transform lanternCollider = AddCollider(lanternParent, "collider", typeof(BoxCollider));
                 lanternCollider.localPosition = new Vector3(0.2f, 2f, 0f);
                 lanternCollider.localScale = new Vector3(0.02f, 0.02f, 0.5f);

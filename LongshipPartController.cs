@@ -34,7 +34,7 @@ namespace LongshipUpgrades
 
                 sb.Clear();
 
-                if (!Player.m_localPlayer.NoCostCheat() && !Player.m_localPlayer.KnowStationLevel(m_stationName, m_stationLevel))
+                if (!Player.m_localPlayer.NoCostCheat() && !string.IsNullOrWhiteSpace(m_stationName) && !Player.m_localPlayer.KnowStationLevel(m_stationName, m_stationLevel))
                 {
                     AddUpgradeHintToHover("$lu_controller_message_unknownupgrade");
                     return true;
@@ -75,7 +75,8 @@ namespace LongshipUpgrades
                     
                 zdo.Set(m_zdoVar, true);
 
-                buildEffects[m_stationName]?.Create(player.transform.position, Quaternion.identity);
+                if (!string.IsNullOrWhiteSpace(m_stationName))
+                    buildEffects[m_stationName]?.Create(player.transform.position, Quaternion.identity);
 
                 PlayerProfile playerProfile = Game.instance.GetPlayerProfile();
                 playerProfile.IncrementStat(PlayerStatType.CraftsOrUpgrades);
@@ -117,8 +118,10 @@ namespace LongshipUpgrades
 
             private void AddRequiredStationToHover()
             {
-                if (!string.IsNullOrWhiteSpace(m_stationName))
-                    sb.AppendFormat(" {0}", m_stationName);
+                if (string.IsNullOrWhiteSpace(m_stationName))
+                    return;
+
+                sb.AppendFormat(" {0}", m_stationName);
 
                 if (m_stationLevel > 1)
                     sb.AppendFormat(" $msg_level {0}", m_stationLevel);
@@ -126,8 +129,10 @@ namespace LongshipUpgrades
 
             private void AddRequiredStationToHover(Color station, Color level)
             {
-                if (!string.IsNullOrWhiteSpace(m_stationName))
-                    sb.AppendFormat(" <color=#{0}>{1}</color>", ColorUtility.ToHtmlStringRGBA(station), m_stationName);
+                if (string.IsNullOrWhiteSpace(m_stationName))
+                    return;
+
+                sb.AppendFormat(" <color=#{0}>{1}</color>", ColorUtility.ToHtmlStringRGBA(station), m_stationName);
 
                 if (m_stationLevel > 1)
                     sb.AppendFormat(" $msg_level <color=#{0}>{1}</color>", ColorUtility.ToHtmlStringRGBA(level), m_stationLevel);
@@ -136,7 +141,9 @@ namespace LongshipUpgrades
             private void AddRequiredStationToHover(Color station)
             {
                 if (!string.IsNullOrWhiteSpace(m_stationName))
-                    sb.AppendFormat(" <color=#{0}>{1}</color>", ColorUtility.ToHtmlStringRGBA(station), m_stationName);
+                    return;
+
+                sb.AppendFormat(" <color=#{0}>{1}</color>", ColorUtility.ToHtmlStringRGBA(station), m_stationName);
 
                 if (m_stationLevel > 1)
                     sb.AppendFormat(" $msg_level {0}", m_stationLevel);
@@ -180,19 +187,19 @@ namespace LongshipUpgrades
 
             private bool RemoveRequiredItems(Player player)
             {
-                if (m_requirements.Length == 0)
-                    return true;
-
                 if (player.NoCostCheat())
                     return true;
 
-                if (!player.KnowStationLevel(m_stationName, m_stationLevel))
+                if (!string.IsNullOrWhiteSpace(m_stationName) && !player.KnowStationLevel(m_stationName, m_stationLevel))
                     return false;
 
                 if (!HaveCraftinStationInRange(out bool lvlMet) || !lvlMet)
                     return false;
 
                 if (ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoBuildCost))
+                    return true;
+
+                if (m_requirements.Length == 0)
                     return true;
 
                 tempRecipe.m_resources = m_requirements;
@@ -206,6 +213,7 @@ namespace LongshipUpgrades
 
         public ZNetView m_nview;
         public Ship m_ship;
+        public Piece m_piece;
         public string m_name = "Part";
 
         public bool m_checkGuardStone = true;
@@ -250,10 +258,14 @@ namespace LongshipUpgrades
                 m_nview = GetComponentInParent<ZNetView>();
 
             m_ship = GetComponentInParent<Ship>();
+            m_piece = GetComponentInParent<Piece>();
         }
 
         public string GetHoverText()
         {
+            if (LongshipUpgrades.onlyCreatorUpgrades.Value && m_piece != null && !m_piece.IsCreator())
+                return "";
+
             if (!IsPositionToInteract())
                 return "";
 
@@ -300,6 +312,9 @@ namespace LongshipUpgrades
         public bool Interact(Humanoid human, bool hold, bool alt)
         {
             if (hold)
+                return false;
+
+            if (LongshipUpgrades.onlyCreatorUpgrades.Value && m_piece != null && !m_piece.IsCreator())
                 return false;
 
             if (m_checkGuardStone && !PrivateArea.CheckAccess(base.transform.position))

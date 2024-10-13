@@ -40,6 +40,8 @@ namespace LongshipUpgrades
 
         public ZNetView m_nview;
 
+        public Piece m_piece;
+
         public static ItemDrop.ItemData.ItemType supportedItemType = ItemDrop.ItemData.ItemType.Trophy;
 
         private static readonly List<ItemDrop.ItemData> tempItems = new List<ItemDrop.ItemData>();
@@ -62,6 +64,8 @@ namespace LongshipUpgrades
 
             if (trophyEffects.Count == 0)
                 FillTrophyEffects();
+
+            m_piece = GetComponentInParent<Piece>();
         }
 
         public string GetHoverText()
@@ -77,8 +81,10 @@ namespace LongshipUpgrades
             if (HaveAttachment())
             {
                 sb.Append(m_currentItemName);
-                sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] $piece_itemstand_take");
-                
+
+                if (!LongshipUpgrades.onlyCreatorStand.Value || m_piece == null || m_piece.IsCreator())
+                    sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] $piece_itemstand_take");
+
                 if (m_guardianPower != null)
                 {
                     if (IsInvoking("DelayedPowerActivation"))
@@ -104,7 +110,9 @@ namespace LongshipUpgrades
             else
             {
                 sb.Append(m_name);
-                sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>][<color=yellow><b>1-8</b></color>] $piece_itemstand_attach");
+                
+                if (!LongshipUpgrades.onlyCreatorStand.Value || m_piece == null || m_piece.IsCreator())
+                    sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>][<color=yellow><b>1-8</b></color>] $piece_itemstand_attach");
             }
 
             return Localization.instance.Localize(sb.ToString());
@@ -127,7 +135,8 @@ namespace LongshipUpgrades
             {
                 if (!alt)
                 {
-                    m_nview.InvokeRPC("DropItem");
+                    if (!LongshipUpgrades.onlyCreatorStand.Value || m_piece == null || m_piece.IsCreator())
+                        m_nview.InvokeRPC("DropItem");
                     return true;
                 }
 
@@ -150,11 +159,14 @@ namespace LongshipUpgrades
             }
             else
             {
-                user.GetInventory().GetAllItems(supportedItemType, tempItems);
-                if (tempItems.Count > 0)
+                if (!LongshipUpgrades.onlyCreatorStand.Value || m_piece == null || m_piece.IsCreator())
                 {
-                    UseItem(user, tempItems[0]);
-                    return true;
+                    user.GetInventory().GetAllItems(supportedItemType, tempItems);
+                    if (tempItems.Count > 0)
+                    {
+                        UseItem(user, tempItems[0]);
+                        return true;
+                    }
                 }
 
                 user.Message(MessageHud.MessageType.Center, "$piece_itemstand_missingitem");
@@ -354,6 +366,9 @@ namespace LongshipUpgrades
 
         public bool CanAttach(ItemDrop.ItemData item)
         {
+            if (LongshipUpgrades.onlyCreatorStand.Value && m_piece != null && !m_piece.IsCreator())
+                return false;
+
             return GetAttachPrefab(item.m_dropPrefab) != null && item.m_shared.m_itemType == supportedItemType;
         }
 
