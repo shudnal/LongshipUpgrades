@@ -140,7 +140,7 @@ namespace LongshipUpgrades
 
             private void AddRequiredStationToHover(Color station)
             {
-                if (!string.IsNullOrWhiteSpace(m_stationName))
+                if (string.IsNullOrWhiteSpace(m_stationName))
                     return;
 
                 sb.AppendFormat(" <color=#{0}>{1}</color>", ColorUtility.ToHtmlStringRGBA(station), m_stationName);
@@ -190,7 +190,7 @@ namespace LongshipUpgrades
                 if (player.NoCostCheat())
                     return true;
 
-                if (!string.IsNullOrWhiteSpace(m_stationName) && !player.KnowStationLevel(m_stationName, m_stationLevel))
+                if (!string.IsNullOrWhiteSpace(m_stationName) && m_stationLevel > 0 && !player.KnowStationLevel(m_stationName, m_stationLevel))
                     return false;
 
                 if (!HaveCraftinStationInRange(out bool lvlMet) || !lvlMet)
