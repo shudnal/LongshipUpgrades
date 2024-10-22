@@ -1311,6 +1311,10 @@ namespace LongshipUpgrades
 
         internal static void OnGlobalStart()
         {
+            standSharedMaterial = null;
+            storageSharedMaterial = null;
+            plankSharedMaterial = null;
+
             isNightTime = false;
             isTimeToLight = true;
 
@@ -1330,17 +1334,17 @@ namespace LongshipUpgrades
 
         private static void FixPrefab()
         {
-            if (prefabFixed)
-                return;
-
-            prefabFixed = true;
-
             GameObject prefab = Resources.FindObjectsOfTypeAll<Ship>().FirstOrDefault(ws => ws.name == prefabName)?.gameObject;
             if (prefab == null)
                 return;
 
             // Flickering fix
-            shaderStandard = prefab.transform.Find("ship/visual/Customize/TraderLamp/fi_vil_light_lamp01_03").GetComponent<MeshRenderer>().sharedMaterial.shader;
+            shaderStandard = prefab.transform.Find("piece_chest/visual/Cube").GetComponent<MeshRenderer>().sharedMaterial.shader;
+
+            if (prefabFixed)
+                return;
+
+            prefabFixed = true;
 
             Transform storage = prefab.transform.Find("ship/visual/Customize/storage");
             for (int i = 0; i < storage.childCount; i++)
@@ -1360,14 +1364,17 @@ namespace LongshipUpgrades
                 renderer.sharedMaterial = storageSharedMaterial;
             }
             
+            if (fixPlanksFlickering.Value)
+            {
             MeshRenderer plankRenderer = prefab.transform.Find("ship/visual/hull_worn/plank").GetComponent<MeshRenderer>();
-            if (plankSharedMaterial == null)
+                if (plankSharedMaterial == null || !(plankSharedMaterial is Material))
                 plankSharedMaterial = new Material(plankRenderer.sharedMaterial)
                 {
                     shader = shaderStandard
                 };
             plankRenderer.sharedMaterial = plankSharedMaterial;
             prefab.transform.Find("ship/visual/hull_worn/plank (1)").GetComponent<MeshRenderer>().sharedMaterial = plankSharedMaterial;
+            }
 
             Transform beam = prefab.transform.Find("ship/visual/Customize/ShipTen2_beam");
             beam.localPosition += new Vector3(0f, 0.1f, 0f);

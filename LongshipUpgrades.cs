@@ -28,6 +28,7 @@ namespace LongshipUpgrades
         internal static ConfigEntry<bool> loggingEnabled;
         internal static ConfigEntry<bool> onlyCreatorUpgrades;
         internal static ConfigEntry<bool> onlyCreatorStand;
+        internal static ConfigEntry<bool> fixPlanksFlickering;
 
         internal static ConfigEntry<Color> hintStationColor;
         internal static ConfigEntry<Color> hintColor;
@@ -133,6 +134,7 @@ namespace LongshipUpgrades
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging. [Not Synced with Server]", false);
             onlyCreatorUpgrades = config("General", "Only creator can upgrade ship", defaultValue: true, "Only ship's creator can upgrade it.");
             onlyCreatorStand = config("General", "Only creator can change trophy", defaultValue: true, "Only ship's creator can put and get trophy from stand.");
+            fixPlanksFlickering = config("General", "Fix planks flickering", defaultValue: true, "Fix flickering of planks on the stern and bow of the ship. Restart required. [Not Synced with Server]", false);
 
             hintStationColor = config("Hint", "Station color", defaultValue: new Color(0.75f, 1f, 0.75f, 1f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
             hintColor = config("Hint", "Hint color", defaultValue: new Color(0.678f, 0.847f, 0.902f, 1f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
