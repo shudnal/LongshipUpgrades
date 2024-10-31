@@ -16,7 +16,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.3";
+        public const string pluginVersion = "1.0.4";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -79,6 +79,7 @@ namespace LongshipUpgrades
         internal static ConfigEntry<bool> itemStandEnabled;
         internal static ConfigEntry<bool> itemStandDisableSpeaking;
         internal static ConfigEntry<string> itemStandTrophyRescale;
+        internal static ConfigEntry<bool> itemStandForsakenPower;
 
         internal static ConfigEntry<bool> mastEnabled;
         internal static ConfigEntry<bool> mastRemovable;
@@ -197,9 +198,10 @@ namespace LongshipUpgrades
             turretsStationLvl = config("Turrets", "Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
             turretsStationRange = config("Turrets", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
-            itemStandEnabled = config("Item stand", "Enabled", defaultValue: true, "Enable item stand on bow for trophy. Boss trophies brings an option to cast another Forsaken power while on ship.");
+            itemStandEnabled = config("Item stand", "Enabled", defaultValue: true, "Enable item stand on bow for trophy.");
             itemStandDisableSpeaking = config("Item stand", "Trophy speaking disabled", defaultValue: false, "Trophis will not do random speak. World restart or ship rebuild required to apply changes.");
             itemStandTrophyRescale = config("Item stand", "Trophy rescale", defaultValue: "TrophyBonemass:0,7;TrophyBonemawSerpent:0,7;TrophySeekerQueen:0,7;TrophyGoblinKing:0,7", "Some trophies are ginormous. Set smaller scale for them. Trophy rehook required to apply changes.");
+            itemStandForsakenPower = config("Item stand", "Forsaken power enabled", defaultValue: true, "Boss trophies brings an option to cast another Forsaken power while on ship.");
 
             changeHead = config("Style", "Change heads", defaultValue: true, "Change ship's head style.");
             changeShields = config("Style", "Change shields color", defaultValue: true, "Change shields colors. World restart or ship rebuild required to apply changes.");

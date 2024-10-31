@@ -1,3 +1,7 @@
+# 1.0.4
+* disableable forsaken power on item stand
+* bog witch
+
 # 1.0.3
 * fixed blinking station required text in hover
 

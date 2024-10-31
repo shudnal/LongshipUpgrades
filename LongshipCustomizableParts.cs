@@ -791,6 +791,8 @@ namespace LongshipUpgrades
 
                 EffectArea fireWarmth = m_fireWarmth.gameObject.AddComponent<EffectArea>();
                 fireWarmth.m_type = EffectArea.Type.Fire | EffectArea.Type.Heat;
+                fireWarmth.m_isHeatType = true;
+                fireWarmth.m_playerOnly = true;
 
                 if (lanternSwitchable.Value)
                 {
@@ -1363,17 +1365,17 @@ namespace LongshipUpgrades
 
                 renderer.sharedMaterial = storageSharedMaterial;
             }
-            
+
             if (fixPlanksFlickering.Value)
             {
-            MeshRenderer plankRenderer = prefab.transform.Find("ship/visual/hull_worn/plank").GetComponent<MeshRenderer>();
+                MeshRenderer plankRenderer = prefab.transform.Find("ship/visual/hull_worn/plank").GetComponent<MeshRenderer>();
                 if (plankSharedMaterial == null || !(plankSharedMaterial is Material))
-                plankSharedMaterial = new Material(plankRenderer.sharedMaterial)
-                {
-                    shader = shaderStandard
-                };
-            plankRenderer.sharedMaterial = plankSharedMaterial;
-            prefab.transform.Find("ship/visual/hull_worn/plank (1)").GetComponent<MeshRenderer>().sharedMaterial = plankSharedMaterial;
+                    plankSharedMaterial = new Material(plankRenderer.sharedMaterial)
+                    {
+                        shader = shaderStandard
+                    };
+                plankRenderer.sharedMaterial = plankSharedMaterial;
+                prefab.transform.Find("ship/visual/hull_worn/plank (1)").GetComponent<MeshRenderer>().sharedMaterial = plankSharedMaterial;
             }
 
             Transform beam = prefab.transform.Find("ship/visual/Customize/ShipTen2_beam");

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using static LongshipUpgrades.LongshipUpgrades;
 
 namespace LongshipUpgrades
 {
@@ -82,10 +83,10 @@ namespace LongshipUpgrades
             {
                 sb.Append(m_currentItemName);
 
-                if (!LongshipUpgrades.onlyCreatorStand.Value || m_piece == null || m_piece.IsCreator())
+                if (!onlyCreatorStand.Value || m_piece == null || m_piece.IsCreator())
                     sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>] $piece_itemstand_take");
 
-                if (m_guardianPower != null)
+                if (itemStandForsakenPower.Value && m_guardianPower != null)
                 {
                     if (IsInvoking("DelayedPowerActivation"))
                         return "";
@@ -111,7 +112,7 @@ namespace LongshipUpgrades
             {
                 sb.Append(m_name);
                 
-                if (!LongshipUpgrades.onlyCreatorStand.Value || m_piece == null || m_piece.IsCreator())
+                if (!onlyCreatorStand.Value || m_piece == null || m_piece.IsCreator())
                     sb.Append("\n[<color=yellow><b>$KEY_Use</b></color>][<color=yellow><b>1-8</b></color>] $piece_itemstand_attach");
             }
 
@@ -135,12 +136,12 @@ namespace LongshipUpgrades
             {
                 if (!alt)
                 {
-                    if (!LongshipUpgrades.onlyCreatorStand.Value || m_piece == null || m_piece.IsCreator())
+                    if (!onlyCreatorStand.Value || m_piece == null || m_piece.IsCreator())
                         m_nview.InvokeRPC("DropItem");
                     return true;
                 }
 
-                if (m_guardianPower != null)
+                if (itemStandForsakenPower.Value && m_guardianPower != null)
                 {
                     if (IsInvoking("DelayedPowerActivation"))
                         return false;
@@ -159,7 +160,7 @@ namespace LongshipUpgrades
             }
             else
             {
-                if (!LongshipUpgrades.onlyCreatorStand.Value || m_piece == null || m_piece.IsCreator())
+                if (!onlyCreatorStand.Value || m_piece == null || m_piece.IsCreator())
                 {
                     user.GetInventory().GetAllItems(supportedItemType, tempItems);
                     if (tempItems.Count > 0)
@@ -336,14 +337,14 @@ namespace LongshipUpgrades
             GameObject itemPrefab = ObjectDB.instance.GetItemPrefab(itemName);
             if (itemPrefab == null)
             {
-                LongshipUpgrades.LogWarning("Missing item prefab " + itemName);
+                LogWarning("Missing item prefab " + itemName);
                 return;
             }
 
             GameObject attachPrefab = GetAttachPrefab(itemPrefab);
             if (attachPrefab == null)
             {
-                LongshipUpgrades.LogWarning("Failed to get attach prefab for item " + itemName);
+                LogWarning("Failed to get attach prefab for item " + itemName);
                 return;
             }
 
@@ -366,7 +367,7 @@ namespace LongshipUpgrades
 
         public bool CanAttach(ItemDrop.ItemData item)
         {
-            if (LongshipUpgrades.onlyCreatorStand.Value && m_piece != null && !m_piece.IsCreator())
+            if (onlyCreatorStand.Value && m_piece != null && !m_piece.IsCreator())
                 return false;
 
             return GetAttachPrefab(item.m_dropPrefab) != null && item.m_shared.m_itemType == supportedItemType;
@@ -384,7 +385,7 @@ namespace LongshipUpgrades
 
         internal static bool TryFindScaleOverride(string itemName, out float scale)
         {
-            foreach (string rescale in LongshipUpgrades.itemStandTrophyRescale.Value.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string rescale in itemStandTrophyRescale.Value.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 string[] req = rescale.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
                 if (req.Length != 2)
