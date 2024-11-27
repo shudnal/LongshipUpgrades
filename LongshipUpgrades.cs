@@ -16,7 +16,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.4";
+        public const string pluginVersion = "1.0.5";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -28,7 +28,6 @@ namespace LongshipUpgrades
         internal static ConfigEntry<bool> loggingEnabled;
         internal static ConfigEntry<bool> onlyCreatorUpgrades;
         internal static ConfigEntry<bool> onlyCreatorStand;
-        internal static ConfigEntry<bool> fixPlanksFlickering;
 
         internal static ConfigEntry<Color> hintStationColor;
         internal static ConfigEntry<Color> hintColor;
@@ -135,7 +134,6 @@ namespace LongshipUpgrades
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging. [Not Synced with Server]", false);
             onlyCreatorUpgrades = config("General", "Only creator can upgrade ship", defaultValue: true, "Only ship's creator can upgrade it.");
             onlyCreatorStand = config("General", "Only creator can change trophy", defaultValue: true, "Only ship's creator can put and get trophy from stand.");
-            fixPlanksFlickering = config("General", "Fix planks flickering", defaultValue: true, "Fix flickering of planks on the stern and bow of the ship. Restart required. [Not Synced with Server]", false);
 
             hintStationColor = config("Hint", "Station color", defaultValue: new Color(0.75f, 1f, 0.75f, 1f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
             hintColor = config("Hint", "Hint color", defaultValue: new Color(0.678f, 0.847f, 0.902f, 1f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
@@ -481,10 +479,7 @@ namespace LongshipUpgrades
             }
         }
 
-        private static bool IsBoxLadder(Ladder ladder)
-        {
-            return ladder.m_name == "$lu_box_name";
-        }
+        private static bool IsBoxLadder(Ladder ladder) => ladder.m_name == "$lu_box_name";
 
         [HarmonyPatch(typeof(Ladder), nameof(Ladder.GetHoverText))]
         public static class Ladder_GetHoverText_BoxClimb
@@ -494,7 +489,7 @@ namespace LongshipUpgrades
                 if (!IsBoxLadder(__instance))
                     return true;
 
-                if (__instance.InUseDistance(Player.m_localPlayer))
+                if (__instance.InUseDistance(Player.m_localPlayer) && !Player.m_localPlayer.IsAttached())
                     __result = Localization.instance.Localize(__instance.m_name + "\n[<color=yellow><b>$KEY_Use</b></color>] $lu_box_climb");
                 else
                     __result = "";
@@ -506,12 +501,13 @@ namespace LongshipUpgrades
         [HarmonyPatch(typeof(Ladder), nameof(Ladder.Interact))]
         public static class Ladder_Interact_BoxClimb
         {
+            public static bool Prefix(Ladder __instance, Humanoid character) => !IsBoxLadder(__instance) || !character.IsAttached();
             public static void Postfix(Ladder __instance, Humanoid character, bool hold)
             {
                 if (!IsBoxLadder(__instance))
                     return;
 
-                if (!hold && __instance.InUseDistance(character))
+                if (!hold && __instance.InUseDistance(character) && !character.IsAttached())
                 {
                     character.SetMoveDir(__instance.m_targetPos.forward);
                     character.UpdateWalking(Time.deltaTime);

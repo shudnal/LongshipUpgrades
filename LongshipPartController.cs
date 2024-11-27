@@ -61,10 +61,10 @@ namespace LongshipUpgrades
                 return true;
             }
 
-            public bool CheckConsume(ZDO zdo, Player player, out bool result)
+            public bool CheckConsume(ZNetView nview, Player player, Vector3 position, out bool result)
             {
                 result = false;
-                if (m_zdoVar == 0 || zdo.GetBool(m_zdoVar))
+                if (m_zdoVar == 0 || nview.GetZDO().GetBool(m_zdoVar))
                     return false;
 
                 if (!RemoveRequiredItems(player))
@@ -72,11 +72,8 @@ namespace LongshipUpgrades
                     player.Message(MessageHud.MessageType.Center, "$msg_missingrequirement");
                     return true;
                 }
-                    
-                zdo.Set(m_zdoVar, true);
 
-                if (!string.IsNullOrWhiteSpace(m_stationName))
-                    buildEffects[m_stationName]?.Create(player.transform.position, Quaternion.identity);
+                nview.InvokeRPC("SetBuilt", m_zdoVar, m_stationName, position.ToString());
 
                 PlayerProfile playerProfile = Game.instance.GetPlayerProfile();
                 playerProfile.IncrementStat(PlayerStatType.CraftsOrUpgrades);
@@ -229,15 +226,13 @@ namespace LongshipUpgrades
 
         public int m_variants;
 
-        public EffectList m_switchEffects = new EffectList();
-        public EffectList m_enableEffects = new EffectList();
-        public EffectList m_disableEffects = new EffectList();
+        public int m_switchEffects = -1;
+        public int m_enableEffects = -1;
+        public int m_disableEffects = -1;
 
         private static readonly StringBuilder sb = new StringBuilder(20);
         private static Recipe tempRecipe;
         private static readonly List<CraftingStation> craftingStations = new List<CraftingStation>();
-
-        private static readonly Dictionary<string, EffectList> buildEffects = new Dictionary<string, EffectList>();
 
         public void Awake()
         {
@@ -245,13 +240,6 @@ namespace LongshipUpgrades
             {
                 tempRecipe = ScriptableObject.CreateInstance<Recipe>();
                 tempRecipe.name = "LongshipPartUpgradeTempRecipe";
-            }
-
-            if (buildEffects.Count == 0)
-            {
-                ObjectDB.instance?.m_recipes.Where(recipe => recipe.m_craftingStation != null
-                                                         && recipe.m_craftingStation.m_craftItemEffects.HasEffects())
-                    .Do(recipe => buildEffects[recipe.m_craftingStation.m_name] = recipe.m_craftingStation.m_craftItemEffects);
             }
 
             if (m_nview == null)
@@ -264,7 +252,7 @@ namespace LongshipUpgrades
         public string GetHoverText()
         {
             if (LongshipUpgrades.onlyCreatorUpgrades.Value && m_piece != null && !m_piece.IsCreator())
-                return "";
+                return Localization.instance.Localize("<color=#888888>$piece_noaccess</color>");
 
             if (!IsPositionToInteract())
                 return "";
@@ -317,7 +305,7 @@ namespace LongshipUpgrades
             if (LongshipUpgrades.onlyCreatorUpgrades.Value && m_piece != null && !m_piece.IsCreator())
                 return false;
 
-            if (m_checkGuardStone && !PrivateArea.CheckAccess(base.transform.position))
+            if (m_checkGuardStone && !PrivateArea.CheckAccess(transform.position))
                 return false;
 
             if (!InUseDistance(human))
@@ -329,23 +317,23 @@ namespace LongshipUpgrades
             if (!IsPositionToInteract())
                 return false;
 
+            Player player = human as Player;
             ZDO zdo = m_nview.GetZDO();
             foreach (UpgradeRequirements upgradeRequirements in m_upgradeRequirements)
-                if (upgradeRequirements.CheckConsume(zdo, human as Player, out bool result))
+                if (upgradeRequirements.CheckConsume(m_nview, player, transform.position, out bool result))
                     return result;
 
             if (m_zdoPartVariant != 0 && m_variants > 1)
             {
-                zdo.Set(m_zdoPartVariant, (zdo.GetInt(m_zdoPartVariant) + 1) % m_variants);
-                m_switchEffects?.Create(base.transform.position, base.transform.rotation);
+                m_nview.InvokeRPC("SetVariant", m_zdoPartVariant, (zdo.GetInt(m_zdoPartVariant) + 1) % m_variants, m_switchEffects, transform.position.ToString());
                 return true;
             }
 
             if (m_zdoPartDisabled == 0)
                 return false;
 
-            zdo.Set(m_zdoPartDisabled, !zdo.GetBool(m_zdoPartDisabled));
-            (zdo.GetBool(m_zdoPartDisabled) ? m_disableEffects : m_enableEffects)?.Create(base.transform.position, base.transform.rotation);
+            bool active = !zdo.GetBool(m_zdoPartDisabled);
+            m_nview.InvokeRPC("SetActive", m_zdoPartDisabled, active, active ? m_disableEffects : m_enableEffects, transform.position.ToString());
             return true;
         }
 
@@ -375,8 +363,8 @@ namespace LongshipUpgrades
         private bool IsPositionToInteract()
         {
             return Ship.GetLocalShip() == m_ship
-                && Vector3.Dot(base.transform.position - Player.m_localPlayer.GetEyePoint(), base.transform.position - Utils.GetMainCamera().transform.position) > 0
-                && Vector3.Dot(base.transform.position - Player.m_localPlayer.transform.position, base.transform.position - Utils.GetMainCamera().transform.position) > 0;
+                && Vector3.Dot(transform.position - Player.m_localPlayer.GetEyePoint(), transform.position - Utils.GetMainCamera().transform.position) > 0
+                && Vector3.Dot(transform.position - Player.m_localPlayer.transform.position, transform.position - Utils.GetMainCamera().transform.position) > 0;
         }
     }
 }

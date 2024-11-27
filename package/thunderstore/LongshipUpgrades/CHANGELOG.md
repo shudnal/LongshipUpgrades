@@ -1,3 +1,10 @@
+# 1.0.5
+* more consistent upgrades and switch in multiplayer
+* pink objects fixed
+* hover will tell explicitly if you have no access to ship (not the owner)
+* ship's health and visual state will be correct after loading
+* you can no longer use box climb while sitting
+
 # 1.0.4
 * disableable forsaken power on item stand
 * bog witch

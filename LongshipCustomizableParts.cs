@@ -67,7 +67,7 @@ namespace LongshipUpgrades
         public const string prefabName = "VikingShip";
         public const string turretName = "piece_turret";
         public const string moderBossStone = "BossStone_DragonQueen";
-        private static bool prefabFixed = false;
+        private static bool prefabInitialized = false;
 
         private static Shader shaderStandard;
         private static Material standSharedMaterial;
@@ -112,12 +112,15 @@ namespace LongshipUpgrades
         public static List<Texture2D> customSails = new List<Texture2D>();
         public static List<Texture2D> customShields = new List<Texture2D>();
 
-        public static EffectList fabricSwitchEffects = new EffectList();
-        public static EffectList woodSwitchEffects = new EffectList();
-        public static EffectList lampEnableEffects = new EffectList();
-        public static EffectList lampDisableEffects = new EffectList();
-        public static EffectList turretsEnableEffects = new EffectList();
-        public static EffectList turretsDisableEffects = new EffectList();
+        private static readonly Dictionary<string, EffectList> buildEffects = new Dictionary<string, EffectList>();
+
+        public static EffectList partEffects = new EffectList();
+        public const int fabricSwitch = 0;
+        public const int woodSwitch = 1;
+        public const int lampEnable = 2;
+        public const int lampDisable = 3;
+        public const int turretsEnable = 4;
+        public const int turretsDisable = 5;
 
         private static readonly Dictionary<GameObject, LongshipCustomizableParts> s_allInstances = new Dictionary<GameObject, LongshipCustomizableParts>();
 
@@ -132,13 +135,26 @@ namespace LongshipUpgrades
             m_nview = GetComponent<ZNetView>();
             m_zdo = m_nview?.GetZDO();
 
-            enabled = m_zdo != null;
+            enabled = m_nview.IsValid();
+            if (enabled)
+            {
+                m_nview.Register<int, int, int, string>("SetVariant", RPC_SetVariant);
+                m_nview.Register<int, bool, int, string>("SetActive", RPC_SetActive);
+                m_nview.Register<int, string, string>("SetBuilt", RPC_SetBuilt);
+            }
 
             m_container = GetComponentsInChildren<Container>().Where(container => container.gameObject.name == "piece_chest").FirstOrDefault();
             m_destroyedLootPrefab = m_container?.m_destroyedLootPrefab;
 
             if (m_wnt)
                 m_wnt.m_onDestroyed = (Action)Delegate.Combine(m_wnt.m_onDestroyed, new Action(OnDestroyed));
+
+            if (buildEffects.Count == 0)
+            {
+                ObjectDB.instance?.m_recipes.Where(recipe => recipe.m_craftingStation != null
+                                                         && recipe.m_craftingStation.m_craftItemEffects.HasEffects())
+                    .Do(recipe => buildEffects[recipe.m_craftingStation.m_name] = recipe.m_craftingStation.m_craftItemEffects);
+            }
 
             CheckEffects();
 
@@ -198,7 +214,7 @@ namespace LongshipUpgrades
                 isNightTime = IsNightTime();
                 isTimeToLight = IsTimeToLight();
 
-                if (lanternAutoSwtich.Value && timeChanged)
+                if (lanternAutoSwtich.Value && timeChanged && m_zdo.IsOwner())
                     m_zdo.Set(s_lightsDisabled, !isTimeToLight);
 
                 m_isLampLightDisabled = m_zdo.GetBool(s_lightsDisabled);
@@ -240,13 +256,17 @@ namespace LongshipUpgrades
 
             m_storageUpgrade?.SetActive(containerEnabled.Value && !m_containerUpgradedLvl2);
 
+            bool updateHealth = false;
             if (healthEnabled.Value && m_protectiveParts != null && m_wnt && m_healthUpgraded != m_zdo.GetBool(s_healthUpgraded))
             {
                 m_healthUpgraded = m_zdo.GetBool(s_healthUpgraded);
                 m_protectiveParts.Do(part => part?.SetActive(m_healthUpgraded));
 
                 if (m_healthUpgraded && m_wnt.m_health < healthUpgradeLvl1.Value)
+                {
                     m_wnt.m_health = healthUpgradeLvl1.Value;
+                    updateHealth = true;
+                }
             }
 
             if (healthEnabled.Value && m_wnt && m_ashlandsUpgraded != m_zdo.GetBool(s_ashlandsUpgraded))
@@ -256,7 +276,10 @@ namespace LongshipUpgrades
                 if (m_ashlandsUpgraded && healthUpgradeLvl2.Value > 0)
                 {
                     if (m_wnt.m_health < healthUpgradeLvl2.Value)
+                    {
                         m_wnt.m_health = healthUpgradeLvl2.Value;
+                        updateHealth = true;
+                    }
 
                     if (ashlandsProtection.Value)
                     {
@@ -270,12 +293,15 @@ namespace LongshipUpgrades
                 UpdateHullPropertyBlocks();
             }
 
+            if (updateHealth && m_nview.IsValid() && m_nview.IsOwner())
+                m_nview.InvokeRPC(ZNetView.Everybody, "RPC_HealthChanged", m_nview.GetZDO().GetFloat(ZDOVars.s_health, m_wnt.m_health));
+
             m_healthUpgrade?.SetActive(healthEnabled.Value && !m_ashlandsUpgraded);
 
             if (changeShields.Value && healthEnabled.Value && m_protectiveParts != null && m_healthUpgraded && m_shieldsStyle != m_zdo.GetInt(s_shieldsStyle))
             {
                 m_shieldsStyle = m_zdo.GetInt(s_shieldsStyle);
-                if (maxShields.Value != 0 && m_shieldsStyle > maxShields.Value)
+                if (maxShields.Value != 0 && m_shieldsStyle > maxShields.Value && m_zdo.IsOwner())
                 {
                     m_shieldsStyle %= maxShields.Value;
                     m_zdo.Set(s_shieldsStyle, m_shieldsStyle);
@@ -315,6 +341,34 @@ namespace LongshipUpgrades
             m_headStyles?.SetActive(changeHead.Value);
 
             SetPropertyBlocks();
+        }
+
+        public void RPC_SetVariant(long uid, int zdoVar, int variant, int effectVariant, string position)
+        {
+            if (m_nview.IsOwner())
+            {
+                m_zdo.Set(zdoVar, variant);
+                partEffects.Create(ParseVector3(position), Quaternion.identity, variant:effectVariant);
+            }
+        }
+
+        public void RPC_SetActive(long uid, int zdoVar, bool active, int effectVariant, string position)
+        {
+            if (m_nview.IsOwner())
+            {
+                m_zdo.Set(zdoVar, active);
+                partEffects.Create(ParseVector3(position), Quaternion.identity, variant: effectVariant);
+            }
+        }
+
+        public void RPC_SetBuilt(long uid, int zdoVar, string stationName, string position)
+        {
+            if (m_nview.IsOwner())
+            {
+                m_zdo.Set(zdoVar, true);
+                if (!string.IsNullOrWhiteSpace(stationName))
+                    buildEffects[stationName]?.Create(ParseVector3(position), Quaternion.identity);
+            }
         }
 
         private void UpdateSailPropertyBlocks()
@@ -643,9 +697,9 @@ namespace LongshipUpgrades
                     lanternController.m_name = "$lu_part_lantern_name";
                     lanternController.m_zdoPartDisabled = lanternRemovable.Value ? s_lanternDisabled : 0;
                     lanternController.m_messageEnable = "$lu_part_lantern_enable";
-                    lanternController.m_enableEffects = woodSwitchEffects;
+                    lanternController.m_enableEffects = woodSwitch;
                     lanternController.m_messageDisable = "$lu_part_lantern_disable";
-                    lanternController.m_disableEffects = woodSwitchEffects;
+                    lanternController.m_disableEffects = woodSwitch;
 
                     lanternController.m_nview = m_nview;
                     lanternController.m_useDistance = 3f;
@@ -663,9 +717,9 @@ namespace LongshipUpgrades
                     tentController.m_name = "$lu_part_tent_name";
                     tentController.m_zdoPartDisabled = tentRemovable.Value ? s_tentDisabled : 0;
                     tentController.m_messageEnable = "$lu_part_tent_enable";
-                    tentController.m_enableEffects = fabricSwitchEffects;
+                    tentController.m_enableEffects = fabricSwitch;
                     tentController.m_messageDisable = "$lu_part_tent_disable";
-                    tentController.m_disableEffects = fabricSwitchEffects;
+                    tentController.m_disableEffects = fabricSwitch;
                     tentController.m_nview = m_nview;
                     tentController.m_useDistance = 3f;
                     tentController.AddUpgradeRequirement(s_tentUpgraded,
@@ -684,7 +738,7 @@ namespace LongshipUpgrades
                     sailController.m_messageSwitch = "$lu_part_sail_switch";
                     sailController.m_zdoPartVariant = s_sailStyle;
                     sailController.m_variants = customSails.Count + 1;
-                    sailController.m_switchEffects = fabricSwitchEffects;
+                    sailController.m_switchEffects = fabricSwitch;
                 }
             }
 
@@ -721,7 +775,7 @@ namespace LongshipUpgrades
                         tentController.m_messageSwitch = "$lu_part_tent_switch";
                         tentController.m_zdoPartVariant = s_tentStyle;
                         tentController.m_variants = customTents.Count + 1;
-                        tentController.m_switchEffects = fabricSwitchEffects;
+                        tentController.m_switchEffects = fabricSwitch;
                     }
             }
 
@@ -801,8 +855,8 @@ namespace LongshipUpgrades
                     lampController.m_zdoPartDisabled = s_lightsDisabled;
                     lampController.m_messageEnable = "$lu_part_lamp_enable";
                     lampController.m_messageDisable = "$lu_part_lamp_disable";
-                    lampController.m_enableEffects = lampEnableEffects;
-                    lampController.m_disableEffects = lampDisableEffects;
+                    lampController.m_enableEffects = lampEnable;
+                    lampController.m_disableEffects = lampDisable;
                     lampController.m_nview = m_nview;
                     lampController.m_useDistance = 2f;
                 }
@@ -832,8 +886,8 @@ namespace LongshipUpgrades
                 mastController.m_zdoPartDisabled = mastRemovable.Value ? s_mastRemoved : 0;
                 mastController.m_messageEnable = "$lu_part_mast_enable";
                 mastController.m_messageDisable = "$lu_part_mast_disable";
-                mastController.m_enableEffects = woodSwitchEffects;
-                mastController.m_disableEffects = woodSwitchEffects;
+                mastController.m_enableEffects = woodSwitch;
+                mastController.m_disableEffects = woodSwitch;
                 mastController.m_nview = m_nview;
                 mastController.m_useDistance = 2.5f;
                 mastController.AddUpgradeRequirement(mastEnabled.Value ? s_mastUpgraded : 0,
@@ -979,7 +1033,7 @@ namespace LongshipUpgrades
                         shieldController.m_messageSwitch = "$lu_part_shields_switch";
                         shieldController.m_zdoPartVariant = s_shieldsStyle;
                         shieldController.m_variants = 4 + 3 * customShields.Count;
-                        shieldController.m_switchEffects = woodSwitchEffects;
+                        shieldController.m_switchEffects = woodSwitch;
                     }
             }
 
@@ -1047,7 +1101,7 @@ namespace LongshipUpgrades
                 headsController.m_messageSwitch = "$lu_part_head_switch";
                 headsController.m_zdoPartVariant = s_headStyle;
                 headsController.m_variants = 4;
-                headsController.m_switchEffects = woodSwitchEffects;
+                headsController.m_switchEffects = woodSwitch;
             }
 
             GameObject pieceTurret = Resources.FindObjectsOfTypeAll<Turret>().FirstOrDefault(ws => ws.name == turretName)?.gameObject;
@@ -1074,9 +1128,9 @@ namespace LongshipUpgrades
                 turretsController.m_nview = m_nview;
                 turretsController.m_zdoPartDisabled = s_turretsDisabled;
                 turretsController.m_messageEnable = "$lu_part_turrets_enable";
-                turretsController.m_enableEffects = turretsEnableEffects;
+                turretsController.m_enableEffects = turretsEnable;
                 turretsController.m_messageDisable = "$lu_part_turrets_disable";
-                turretsController.m_disableEffects = turretsDisableEffects;
+                turretsController.m_disableEffects = turretsDisable;
                 turretsController.AddUpgradeRequirement(s_turretsUpgraded,
                                                         "$lu_part_turrets_upgrade",
                                                         ParseRequirements(turretsUpgradeRecipe.Value),
@@ -1313,9 +1367,7 @@ namespace LongshipUpgrades
 
         internal static void OnGlobalStart()
         {
-            standSharedMaterial = null;
-            storageSharedMaterial = null;
-            plankSharedMaterial = null;
+            shaderStandard = null;
 
             isNightTime = false;
             isTimeToLight = true;
@@ -1325,28 +1377,17 @@ namespace LongshipUpgrades
 
         internal static void OnGlobalDestroy()
         {
-            Destroy(standSharedMaterial);
-            Destroy(storageSharedMaterial);
-            Destroy(plankSharedMaterial);
-
-            standSharedMaterial = null;
-            storageSharedMaterial = null;
-            plankSharedMaterial = null;
+            shaderStandard = null;
         }
 
         private static void FixPrefab()
         {
-            GameObject prefab = Resources.FindObjectsOfTypeAll<Ship>().FirstOrDefault(ws => ws.name == prefabName)?.gameObject;
+            GameObject prefab = ZNetScene.instance?.GetPrefab(prefabName) ?? Resources.FindObjectsOfTypeAll<Ship>().FirstOrDefault(ws => ws.name == prefabName)?.gameObject;
             if (prefab == null)
                 return;
 
             // Flickering fix
             shaderStandard = prefab.transform.Find("piece_chest/visual/Cube").GetComponent<MeshRenderer>().sharedMaterial.shader;
-
-            if (prefabFixed)
-                return;
-
-            prefabFixed = true;
 
             Transform storage = prefab.transform.Find("ship/visual/Customize/storage");
             for (int i = 0; i < storage.childCount; i++)
@@ -1357,26 +1398,33 @@ namespace LongshipUpgrades
 
                 MeshRenderer renderer = child.GetComponent<MeshRenderer>();
 
-                if (storageSharedMaterial == null)
+                if (storageSharedMaterial == null || !(storageSharedMaterial is Material))
                     storageSharedMaterial = new Material(renderer.sharedMaterial)
                     {
                         shader = shaderStandard
                     };
+                else
+                    storageSharedMaterial.shader = shaderStandard;
 
                 renderer.sharedMaterial = storageSharedMaterial;
             }
 
-            if (fixPlanksFlickering.Value)
-            {
-                MeshRenderer plankRenderer = prefab.transform.Find("ship/visual/hull_worn/plank").GetComponent<MeshRenderer>();
-                if (plankSharedMaterial == null || !(plankSharedMaterial is Material))
-                    plankSharedMaterial = new Material(plankRenderer.sharedMaterial)
-                    {
-                        shader = shaderStandard
-                    };
-                plankRenderer.sharedMaterial = plankSharedMaterial;
-                prefab.transform.Find("ship/visual/hull_worn/plank (1)").GetComponent<MeshRenderer>().sharedMaterial = plankSharedMaterial;
-            }
+            MeshRenderer plankRenderer = prefab.transform.Find("ship/visual/hull_worn/plank").GetComponent<MeshRenderer>();
+            if (plankSharedMaterial == null || !(plankSharedMaterial is Material))
+                plankSharedMaterial = new Material(plankRenderer.sharedMaterial)
+                {
+                    shader = shaderStandard
+                };
+            else
+                plankSharedMaterial.shader = shaderStandard;
+
+            plankRenderer.sharedMaterial = plankSharedMaterial;
+            prefab.transform.Find("ship/visual/hull_worn/plank (1)").GetComponent<MeshRenderer>().sharedMaterial = plankSharedMaterial;
+
+            if (prefabInitialized)
+                return;
+
+            prefabInitialized = true;
 
             Transform beam = prefab.transform.Find("ship/visual/Customize/ShipTen2_beam");
             beam.localPosition += new Vector3(0f, 0.1f, 0f);
@@ -1443,26 +1491,24 @@ namespace LongshipUpgrades
 
         private static void CheckEffects()
         {
-            CheckEffect(fabricSwitchEffects, "vfx_Place_HildirFabricRoll");
-            CheckEffect(woodSwitchEffects, "sfx_gui_repairitem_workbench");
-            CheckEffect(lampEnableEffects, "sfx_FireAddFuel");
-            CheckEffect(lampDisableEffects, "sfx_fishingrod_linebreak");
-            CheckEffect(turretsEnableEffects, "fx_guardstone_permitted_add");
-            CheckEffect(turretsDisableEffects, "fx_guardstone_permitted_removed");
+            if (partEffects.HasEffects())
+                return;
 
-            static void CheckEffect(EffectList effect, string prefabName)
+            List<EffectList.EffectData> effectPrefabs = new List<EffectList.EffectData>();
+
+            AddEffect(fabricSwitch, "vfx_Place_HildirFabricRoll");
+            AddEffect(woodSwitch, "sfx_gui_repairitem_workbench");
+            AddEffect(lampEnable, "sfx_FireAddFuel");
+            AddEffect(lampDisable, "fx_candle_off");
+            AddEffect(turretsEnable, "fx_guardstone_permitted_add");
+            AddEffect(turretsDisable, "fx_guardstone_permitted_removed");
+
+            partEffects.m_effectPrefabs = effectPrefabs.ToArray();
+
+            void AddEffect(int variant, string prefabName)
             {
-                if (effect.m_effectPrefabs != null && effect.m_effectPrefabs.Length > 0)
-                    return;
-
                 GameObject prefab = ZNetScene.instance.GetPrefab(prefabName);
-                effect.m_effectPrefabs = new EffectList.EffectData[1] {
-                    new EffectList.EffectData
-                    {
-                        m_prefab = prefab,
-                        m_enabled = prefab != null,
-                    }
-                };
+                effectPrefabs.Insert(variant, new EffectList.EffectData { m_prefab = prefab, m_enabled = prefab != null, m_variant = variant });
             }
         }
 
@@ -1481,6 +1527,15 @@ namespace LongshipUpgrades
         internal static bool HasComponent(GameObject go)
         {
             return s_allInstances.ContainsKey(go);
+        }
+
+        public static Vector3 ParseVector3(string rString)
+        {
+            string[] array = rString.Substring(1, rString.Length - 2).Split(',');
+            float x = float.Parse(array[0].Replace('.',','));
+            float y = float.Parse(array[1].Replace('.', ','));
+            float z = float.Parse(array[2].Replace('.', ','));
+            return new Vector3(x, y, z);
         }
     }
 }
