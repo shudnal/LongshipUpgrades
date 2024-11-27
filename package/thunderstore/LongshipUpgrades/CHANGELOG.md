@@ -1,3 +1,6 @@
+# 1.0.6
+* polish translation
+
 # 1.0.5
 * more consistent upgrades and switch in multiplayer
 * pink objects fixed

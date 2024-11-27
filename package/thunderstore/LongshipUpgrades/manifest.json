@@ -1,6 +1,6 @@
 {
   "name": "LongshipUpgrades",
-  "version_number": "1.0.5",
+  "version_number": "1.0.6",
   "website_url": "https://github.com/shudnal/LongshipUpgrades",
   "description": "Upgrade your vanilla Longship with lantern, changeable sails, tent, shields, extended storage and more.",
   "dependencies": ["denikson-BepInExPack_Valheim-5.4.2202"]
