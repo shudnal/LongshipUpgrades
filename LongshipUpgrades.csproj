@@ -95,6 +95,7 @@
     <EmbeddedResource Include="Assets\sail_original.png" />
     <EmbeddedResource Include="Assets\tent_original.png" />
     <EmbeddedResource Include="Assets\shields_original.png" />
+    <EmbeddedResource Include="Assets\ashlands_hull_damaged.png" />
     <Content Include="Libs\LocalizationManager.dll" />
     <Content Include="Libs\ServerSync.dll" />
   </ItemGroup>

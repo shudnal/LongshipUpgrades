@@ -16,7 +16,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.6";
+        public const string pluginVersion = "1.0.7";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -244,6 +244,7 @@ namespace LongshipUpgrades
         private void LoadTextures()
         {
             LoadTexture("ashlands_hull.png", ref LongshipCustomizableParts.s_ashlandsHull);
+            LoadTexture("ashlands_hull_damaged.png", ref LongshipCustomizableParts.s_ashlandsHullDamaged);
 
             Directory.CreateDirectory(configDirectory);
 

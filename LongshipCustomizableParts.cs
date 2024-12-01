@@ -104,6 +104,7 @@ namespace LongshipUpgrades
         public readonly Dictionary<Renderer, MaterialPropertyBlock> s_propertyBlocks = new Dictionary<Renderer, MaterialPropertyBlock>();
 
         public static Texture2D s_ashlandsHull = new Texture2D(2, 2);
+        public static Texture2D s_ashlandsHullDamaged = new Texture2D(2, 2);
 
         public const int piece_nonsolid = 16;
         public const int vehicle = 28;
@@ -334,7 +335,8 @@ namespace LongshipUpgrades
                     m_heads[i].SetActive(m_headStyle == i + 1);
 
                 foreach (GameObject head in new GameObject[] { m_wnt.m_new.transform.Find("skull_head").gameObject,
-                                                               m_wnt.m_worn.transform.Find("skull_head").gameObject })
+                                                               m_wnt.m_worn.transform.Find("skull_head").gameObject,
+                                                               m_wnt.m_broken.transform.Find("skull_head").gameObject })
                     head.SetActive(m_headStyle == 0);
             }
 
@@ -403,11 +405,18 @@ namespace LongshipUpgrades
                 {
                     foreach (Renderer renderer in new List<Renderer> {
                                                             m_wnt.m_new.transform.Find("hull").gameObject.GetComponent<Renderer>(),
-                                                            m_wnt.m_worn.transform.Find("hull").gameObject.GetComponent<Renderer>(),
-                                                            m_wnt.m_new.transform.Find("skull_head").gameObject.GetComponent<Renderer>(),
-                                                            m_wnt.m_worn.transform.Find("skull_head").gameObject.GetComponent<Renderer>()})
+                                                            m_wnt.m_new.transform.Find("skull_head").gameObject.GetComponent<Renderer>()})
                     {
                         SetPropertyBlock(renderer, ShaderProps._MainTex, s_ashlandsHull);
+                    }
+
+                    foreach (Renderer renderer in new List<Renderer> {
+                                                            m_wnt.m_worn.transform.Find("hull").gameObject.GetComponent<Renderer>(),
+                                                            m_wnt.m_broken.transform.Find("hull").gameObject.GetComponent<Renderer>(),
+                                                            m_wnt.m_worn.transform.Find("skull_head").gameObject.GetComponent<Renderer>(),
+                                                            m_wnt.m_broken.transform.Find("skull_head").gameObject.GetComponent<Renderer>()})
+                    {
+                        SetPropertyBlock(renderer, ShaderProps._MainTex, s_ashlandsHullDamaged);
                     }
 
                     if (m_heads != null)
@@ -415,7 +424,6 @@ namespace LongshipUpgrades
                             SetPropertyBlock(renderer, ShaderProps._MainTex, s_ashlandsHull);
                 }
             }
-
         }
 
         private void UpdateShieldsPropertyBlocks()
@@ -1420,6 +1428,8 @@ namespace LongshipUpgrades
 
             plankRenderer.sharedMaterial = plankSharedMaterial;
             prefab.transform.Find("ship/visual/hull_worn/plank (1)").GetComponent<MeshRenderer>().sharedMaterial = plankSharedMaterial;
+            prefab.transform.Find("ship/visual/hull_broken/plank").GetComponent<MeshRenderer>().sharedMaterial = plankSharedMaterial;
+            prefab.transform.Find("ship/visual/hull_broken/plank (1)").GetComponent<MeshRenderer>().sharedMaterial = plankSharedMaterial;
 
             if (prefabInitialized)
                 return;

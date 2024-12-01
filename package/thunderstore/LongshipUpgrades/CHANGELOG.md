@@ -1,3 +1,7 @@
+# 1.0.7
+* more distinct visuals for new and damaged ships with ashlands protection
+* fixed overlapping head when ship is at critical health
+
 # 1.0.6
 * polish translation
 
