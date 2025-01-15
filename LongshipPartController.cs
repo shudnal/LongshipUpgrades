@@ -251,8 +251,8 @@ namespace LongshipUpgrades
 
         public string GetHoverText()
         {
-            if (LongshipUpgrades.onlyCreatorUpgrades.Value && m_piece != null && !m_piece.IsCreator())
-                return Localization.instance.Localize("<color=#888888>$piece_noaccess</color>");
+            if (!m_nview || !m_nview.IsValid())
+                return "";
 
             if (!IsPositionToInteract())
                 return "";
@@ -260,11 +260,11 @@ namespace LongshipUpgrades
             if (!InUseDistance(Player.m_localPlayer))
                 return Localization.instance.Localize("<color=#888888>$piece_toofar</color>");
 
+            if (LongshipUpgrades.onlyCreatorUpgrades.Value && m_piece != null && !m_piece.IsCreator())
+                return Localization.instance.Localize("<color=#888888>$piece_noaccess</color>");
+
             if (m_checkGuardStone && !PrivateArea.CheckAccess(base.transform.position, 0f, flash: false))
                 return Localization.instance.Localize(m_name + "\n$piece_noaccess");
-
-            if (!m_nview || !m_nview.IsValid())
-                return "";
 
             ZDO zdo = m_nview.GetZDO();
             foreach (UpgradeRequirements upgradeRequirements in m_upgradeRequirements)

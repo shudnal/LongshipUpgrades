@@ -27,6 +27,12 @@ After ship destruction any spent materials or turrets' ammo as well as ship carg
 
 ## How to upgrade
 
+Every upgradeable part has its own requirements in materials, station type and station level. All of this is configurable.
+
+If you don't know required station or station level you will have "Unknown upgrade" hover text.
+
+If you don't know some material from requirements list it will appear as "Unknown item" along other known items.
+
 To upgrade a specific part you have to find its spot. All spots are tied to its upgradeable parts.
 * mast upgrade point is located where mast is fastened to the deck
 * lantern upgrade is on its part of a horizontal mast beam

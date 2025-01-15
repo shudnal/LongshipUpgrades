@@ -16,7 +16,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.7";
+        public const string pluginVersion = "1.0.8";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -382,6 +382,8 @@ namespace LongshipUpgrades
         {
             private static readonly Dictionary<Ship, Dictionary<Collider, int>> triggerCounter = new Dictionary<Ship, Dictionary<Collider, int>>();
             
+            private static bool IsTentActive(Ship ship) => LongshipCustomizableParts.TryGetShipComponent(ship, out LongshipCustomizableParts parts) && parts.IsTentActive();
+
             [HarmonyPostfix]
             [HarmonyPatch(nameof(Ship.OnEnable))]
             public static void OnEnablePostfix(Ship __instance) => triggerCounter.Add(__instance, new Dictionary<Collider, int>());
@@ -400,7 +402,7 @@ namespace LongshipUpgrades
                 if (!triggerCounter.TryGetValue(__instance, out Dictionary<Collider, int> colliderTriggered))
                     return true;
 
-                if (!colliderTriggered.ContainsKey(collider))
+                if (!colliderTriggered.ContainsKey(collider) || !IsTentActive(__instance))
                 {
                     colliderTriggered[collider] = 1;
                     return true;
@@ -423,7 +425,7 @@ namespace LongshipUpgrades
                 if (!colliderTriggered.TryGetValue(collider, out int counter))
                     return true;
 
-                if (counter == 1)
+                if (counter == 1 || !IsTentActive(__instance))
                 {
                     colliderTriggered.Remove(collider);
                     return true;
@@ -447,7 +449,7 @@ namespace LongshipUpgrades
                 if (!IsControlledComponent(__instance))
                     return;
 
-                if (__instance.m_nview && __instance.m_nview.IsValid() && (int)__instance.m_speed > 2 && __instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_mastRemoved))
+                if (__instance.m_nview && __instance.m_nview.IsValid() && (__instance.IsSailUp()) && __instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_mastRemoved))
                     __instance.m_speed = Ship.Speed.Slow;
             }
         }

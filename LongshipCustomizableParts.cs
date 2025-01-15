@@ -199,10 +199,10 @@ namespace LongshipUpgrades
             m_tent?.SetActive(m_customMast && tentEnabled.Value && m_zdo.GetBool(s_tentUpgraded) && !m_zdo.GetBool(s_tentDisabled));
             m_lantern?.SetActive(lanternEnabled.Value && m_customMast && m_zdo.GetBool(s_lanternUpgraded) && !m_zdo.GetBool(s_lanternDisabled));
 
-            m_holdersRight?.SetActive(m_tent && m_tent.activeInHierarchy);
-            m_holdersLeft?.SetActive(m_tent && m_tent.activeInHierarchy);
+            m_holdersRight?.SetActive(IsTentActive());
+            m_holdersLeft?.SetActive(IsTentActive());
 
-            m_fireWarmth?.SetActive(tentHeat.Value && m_lantern && m_lantern.activeInHierarchy && m_tent && m_tent.activeInHierarchy);
+            m_fireWarmth?.SetActive(tentHeat.Value && m_lantern && m_lantern.activeInHierarchy && IsTentActive());
 
             m_turretsUpgrade?.SetActive(turretsEnabled.Value);
             m_turrets?.SetActive(turretsEnabled.Value && m_zdo.GetBool(s_turretsUpgraded));
@@ -224,11 +224,11 @@ namespace LongshipUpgrades
 
             if (m_beamMesh)
             {
-                m_beamMesh.transform.localPosition = new Vector3(0f, 0f, (m_tent && m_tent.activeInHierarchy) ? 0f : -0.9f);
-                m_beamMesh.transform.localScale = new Vector3(1f, 1f, (m_tent && m_tent.activeInHierarchy) ? 1f : 0.5f);
+                m_beamMesh.transform.localPosition = new Vector3(0f, 0f, IsTentActive() ? 0f : -0.9f);
+                m_beamMesh.transform.localScale = new Vector3(1f, 1f, IsTentActive() ? 1f : 0.5f);
 
-                m_beamTentCollider.transform.localPosition = new Vector3(0f, 1.58f, (m_tent && m_tent.activeInHierarchy) ?  0.23f : -0.49f);
-                m_beamTentCollider.transform.localScale = new Vector3(0.16f, 0.16f, (m_tent && m_tent.activeInHierarchy) ? 2.05f : 0.6f);
+                m_beamTentCollider.transform.localPosition = new Vector3(0f, 1.58f, IsTentActive() ?  0.23f : -0.49f);
+                m_beamTentCollider.transform.localScale = new Vector3(0.16f, 0.16f, IsTentActive() ? 2.05f : 0.6f);
             }
 
             if (containerEnabled.Value && m_storageUpgrade && m_containerUpgradedLvl2 != m_zdo.GetBool(s_containerUpgradedLvl2))
@@ -313,7 +313,7 @@ namespace LongshipUpgrades
 
             m_shieldsStyles?.SetActive(m_healthUpgraded);
 
-            if (changeTent.Value && m_tent != null && m_tent.activeInHierarchy && m_tentStyle != m_zdo.GetInt(s_tentStyle))
+            if (changeTent.Value && IsTentActive() && m_tentStyle != m_zdo.GetInt(s_tentStyle))
             {
                 m_tentStyle = m_zdo.GetInt(s_tentStyle);
 
@@ -1534,10 +1534,11 @@ namespace LongshipUpgrades
                 instance.CombinePropertyBlocks(propertyBlockToCombine);
         }
 
-        internal static bool HasComponent(GameObject go)
-        {
-            return s_allInstances.ContainsKey(go);
-        }
+        internal static bool HasShipComponent(GameObject go) => s_allInstances.ContainsKey(go);
+
+        internal static bool TryGetShipComponent(Ship ship, out LongshipCustomizableParts parts) => s_allInstances.TryGetValue(ship.gameObject, out parts);
+
+        public bool IsTentActive() => m_tent != null && m_tent.activeInHierarchy;
 
         public static Vector3 ParseVector3(string rString)
         {

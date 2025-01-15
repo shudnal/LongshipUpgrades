@@ -15,7 +15,7 @@ namespace LongshipUpgrades
         {
             public static void Postfix(MaterialMan __instance, GameObject gameObject)
             {
-                if (!LongshipCustomizableParts.HasComponent(gameObject))
+                if (!LongshipCustomizableParts.HasShipComponent(gameObject))
                     return;
 
                 if (__instance.m_blocks.TryGetValue(gameObject.GetInstanceID(), out MaterialMan.PropertyContainer propertyContainer))
@@ -28,7 +28,7 @@ namespace LongshipUpgrades
         {
             public static void Postfix(MaterialMan __instance, GameObject go)
             {
-                if (!LongshipCustomizableParts.HasComponent(go))
+                if (!LongshipCustomizableParts.HasShipComponent(go))
                     return;
 
                 if (__instance.m_blocks.TryGetValue(go.GetInstanceID(), out MaterialMan.PropertyContainer propertyContainer))

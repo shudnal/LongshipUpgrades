@@ -1,3 +1,6 @@
+# 1.0.8
+* no more stray ships! Fixed ship not stopping after leaving the board when tent+lamp state was changed
+
 # 1.0.7
 * more distinct visuals for new and damaged ships with ashlands protection
 * fixed overlapping head when ship is at critical health
