@@ -24,7 +24,7 @@
     "lu_part_container_upgrade2": "Expande a altura do armazenamento",
     "lu_part_hull_name": "Casco",
     "lu_part_hull_upgrade1": "Aumenta a saúde\nAdiciona escudos para proteção extra\nPermite que você altere o estilo dos escudos",
-    "lu_part_hull_upgrade2": "Aumenta a saúde em $1",
+    "lu_part_hull_upgrade2": "Aumenta a saúde $1",
     "lu_part_hull_upgrade2_ashlands": "Adiciona proteção contra o oceano de Ashlands",
     "lu_part_shields_name": "Escudos",
     "lu_part_shields_switch": "Alterar estilo",

@@ -24,7 +24,7 @@
     "lu_part_container_upgrade2": "Depolama yüksekliğini artırır",
     "lu_part_hull_name": "Gövde",
     "lu_part_hull_upgrade1": "Sağlığı artırır\nEk koruma için kalkanlar ekler\nKalkanların stilini değiştirmenize olanak tanır",
-    "lu_part_hull_upgrade2": "Sağlığı 1$ artırır",
+    "lu_part_hull_upgrade2": "Sağlığı artırır $1",
     "lu_part_hull_upgrade2_ashlands": "Kültoprakları'na okyanus koruması ekler",
     "lu_part_shields_name": "Kalkanlar",
     "lu_part_shields_switch": "Stilini değiştir",

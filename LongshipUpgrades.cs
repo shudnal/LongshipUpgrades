@@ -16,7 +16,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.8";
+        public const string pluginVersion = "1.0.9";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -382,11 +382,11 @@ namespace LongshipUpgrades
         {
             private static readonly Dictionary<Ship, Dictionary<Collider, int>> triggerCounter = new Dictionary<Ship, Dictionary<Collider, int>>();
             
-            private static bool IsTentActive(Ship ship) => LongshipCustomizableParts.TryGetShipComponent(ship, out LongshipCustomizableParts parts) && parts.IsTentActive();
+            private static bool IsHeatActive(Ship ship) => LongshipCustomizableParts.TryGetShipComponent(ship, out LongshipCustomizableParts parts) && parts.IsHeatActive();
 
             [HarmonyPostfix]
             [HarmonyPatch(nameof(Ship.OnEnable))]
-            public static void OnEnablePostfix(Ship __instance) => triggerCounter.Add(__instance, new Dictionary<Collider, int>());
+            public static void OnEnablePostfix(Ship __instance) =>triggerCounter.Add(__instance, new Dictionary<Collider, int>());
 
             [HarmonyPostfix]
             [HarmonyPatch(nameof(Ship.OnDisable))]
@@ -394,7 +394,7 @@ namespace LongshipUpgrades
 
             [HarmonyPrefix]
             [HarmonyPatch(nameof(Ship.OnTriggerEnter))]
-            public static bool PrefixEnter(Ship __instance, Collider collider)
+            public static bool OnTriggerEnterPrefix(Ship __instance, Collider collider)
             {
                 if (!collider.GetComponent<Character>())
                     return true;
@@ -402,7 +402,7 @@ namespace LongshipUpgrades
                 if (!triggerCounter.TryGetValue(__instance, out Dictionary<Collider, int> colliderTriggered))
                     return true;
 
-                if (!colliderTriggered.ContainsKey(collider) || !IsTentActive(__instance))
+                if (!colliderTriggered.ContainsKey(collider))
                 {
                     colliderTriggered[collider] = 1;
                     return true;
@@ -414,7 +414,7 @@ namespace LongshipUpgrades
 
             [HarmonyPrefix]
             [HarmonyPatch(nameof(Ship.OnTriggerExit))]
-            public static bool PrefixExit(Ship __instance, Collider collider)
+            public static bool OnTriggerExitPrefix(Ship __instance, Collider collider)
             {
                 if (!collider.GetComponent<Character>())
                     return true;
@@ -425,7 +425,7 @@ namespace LongshipUpgrades
                 if (!colliderTriggered.TryGetValue(collider, out int counter))
                     return true;
 
-                if (counter == 1 || !IsTentActive(__instance))
+                if (counter == 1)
                 {
                     colliderTriggered.Remove(collider);
                     return true;

@@ -24,7 +24,6 @@ namespace LongshipUpgrades
         private GameObject m_beamTentCollider;
         private GameObject m_beamSailCollider;
         private GameObject m_insects;
-        private GameObject m_fireWarmth;
         private GameObject m_tent;
         private GameObject m_lantern;
         private GameObject m_holdersRight;
@@ -46,6 +45,7 @@ namespace LongshipUpgrades
         private Light m_light;
         private ParticleSystem m_flare;
         private ShipTrophyStand m_trophyStand;
+        private EffectArea m_fireWarmth;
 
         private GameObject[] m_containerPartsLvl1;
         private GameObject[] m_containerPartsLvl2;
@@ -202,7 +202,15 @@ namespace LongshipUpgrades
             m_holdersRight?.SetActive(IsTentActive());
             m_holdersLeft?.SetActive(IsTentActive());
 
-            m_fireWarmth?.SetActive(tentHeat.Value && m_lantern && m_lantern.activeInHierarchy && IsTentActive());
+            if (m_fireWarmth && m_fireWarmth.m_isHeatType != (m_fireWarmth.m_isHeatType = tentHeat.Value && m_lantern && m_lantern.activeInHierarchy && IsTentActive()))
+            {
+                m_fireWarmth.m_type = m_fireWarmth.m_isHeatType ? EffectArea.Type.Fire | EffectArea.Type.Heat : EffectArea.Type.None;
+                if (Player.m_localPlayer)
+                    if (m_fireWarmth.m_isHeatType && !m_fireWarmth.m_collidedWithCharacter.Contains(Player.m_localPlayer))
+                        m_fireWarmth.m_collidedWithCharacter.Add(Player.m_localPlayer);
+                    else if (!m_fireWarmth.m_isHeatType && m_fireWarmth.m_collidedWithCharacter.Contains(Player.m_localPlayer))
+                        m_fireWarmth.m_collidedWithCharacter.Remove(Player.m_localPlayer);
+            }
 
             m_turretsUpgrade?.SetActive(turretsEnabled.Value);
             m_turrets?.SetActive(turretsEnabled.Value && m_zdo.GetBool(s_turretsUpgraded));
@@ -215,7 +223,7 @@ namespace LongshipUpgrades
                 isNightTime = IsNightTime();
                 isTimeToLight = IsTimeToLight();
 
-                if (lanternAutoSwtich.Value && timeChanged && m_zdo.IsOwner())
+                if (lanternAutoSwtich.Value && timeChanged && m_nview.IsValid() && m_nview.IsOwner())
                     m_zdo.Set(s_lightsDisabled, !isTimeToLight);
 
                 m_isLampLightDisabled = m_zdo.GetBool(s_lightsDisabled);
@@ -302,7 +310,7 @@ namespace LongshipUpgrades
             if (changeShields.Value && healthEnabled.Value && m_protectiveParts != null && m_healthUpgraded && m_shieldsStyle != m_zdo.GetInt(s_shieldsStyle))
             {
                 m_shieldsStyle = m_zdo.GetInt(s_shieldsStyle);
-                if (maxShields.Value != 0 && m_shieldsStyle > maxShields.Value && m_zdo.IsOwner())
+                if (maxShields.Value != 0 && m_shieldsStyle > maxShields.Value && m_nview.IsValid() && m_nview.IsOwner())
                 {
                     m_shieldsStyle %= maxShields.Value;
                     m_zdo.Set(s_shieldsStyle, m_shieldsStyle);
@@ -347,7 +355,7 @@ namespace LongshipUpgrades
 
         public void RPC_SetVariant(long uid, int zdoVar, int variant, int effectVariant, string position)
         {
-            if (m_nview.IsOwner())
+            if (m_nview.IsValid() && m_nview.IsOwner())
             {
                 m_zdo.Set(zdoVar, variant);
                 partEffects.Create(ParseVector3(position), Quaternion.identity, variant:effectVariant);
@@ -356,7 +364,7 @@ namespace LongshipUpgrades
 
         public void RPC_SetActive(long uid, int zdoVar, bool active, int effectVariant, string position)
         {
-            if (m_nview.IsOwner())
+            if (m_nview.IsValid() && m_nview.IsOwner())
             {
                 m_zdo.Set(zdoVar, active);
                 partEffects.Create(ParseVector3(position), Quaternion.identity, variant: effectVariant);
@@ -365,7 +373,7 @@ namespace LongshipUpgrades
 
         public void RPC_SetBuilt(long uid, int zdoVar, string stationName, string position)
         {
-            if (m_nview.IsOwner())
+            if (m_nview.IsValid() && m_nview.IsOwner())
             {
                 m_zdo.Set(zdoVar, true);
                 if (!string.IsNullOrWhiteSpace(stationName))
@@ -843,18 +851,17 @@ namespace LongshipUpgrades
                     }
                 }
 
-                m_fireWarmth = AddCollider(lanternParent, "FireWarmth", typeof(SphereCollider)).gameObject;
-                m_fireWarmth.layer = 14; // character_trigger
-                m_fireWarmth.transform.localPosition = new Vector3(-1f, 0f, 0f);
+                GameObject fireWarmth = AddCollider(customize, "FireWarmth", typeof(SphereCollider)).gameObject;
+                fireWarmth.layer = 14; // character_trigger
+                fireWarmth.transform.localPosition = new Vector3(-1f, 0f, 0f);
+                fireWarmth.transform.localScale = Vector3.one * 0.45f;
 
-                SphereCollider fireWarmthCollider = m_fireWarmth.GetComponent<SphereCollider>();
+                SphereCollider fireWarmthCollider = fireWarmth.GetComponent<SphereCollider>();
                 fireWarmthCollider.radius = 3;
                 fireWarmthCollider.isTrigger = true;
 
-                EffectArea fireWarmth = m_fireWarmth.gameObject.AddComponent<EffectArea>();
-                fireWarmth.m_type = EffectArea.Type.Fire | EffectArea.Type.Heat;
-                fireWarmth.m_isHeatType = true;
-                fireWarmth.m_playerOnly = true;
+                m_fireWarmth = fireWarmth.gameObject.AddComponent<EffectArea>();
+                m_fireWarmth.m_playerOnly = true;
 
                 if (lanternSwitchable.Value)
                 {
@@ -1252,7 +1259,7 @@ namespace LongshipUpgrades
 
         public void OnDestroyed()
         {
-            if (m_nview.IsOwner())
+            if (m_nview.IsValid() && m_nview.IsOwner())
             {
                 DropItemStand();
 
@@ -1536,9 +1543,11 @@ namespace LongshipUpgrades
 
         internal static bool HasShipComponent(GameObject go) => s_allInstances.ContainsKey(go);
 
-        internal static bool TryGetShipComponent(Ship ship, out LongshipCustomizableParts parts) => s_allInstances.TryGetValue(ship.gameObject, out parts);
+        internal static bool TryGetShipComponent(Ship ship, out LongshipCustomizableParts parts) => s_allInstances.TryGetValue(ship.gameObject, out parts) || ship.TryGetComponent(out parts);
 
         public bool IsTentActive() => m_tent != null && m_tent.activeInHierarchy;
+
+        public bool IsHeatActive() => m_fireWarmth != null && m_fireWarmth.m_isHeatType;
 
         public static Vector3 ParseVector3(string rString)
         {

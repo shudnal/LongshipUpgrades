@@ -24,7 +24,7 @@
     "lu_part_container_upgrade2": "Увеличивает высоту хранилища",
     "lu_part_hull_name": "Корпус",
     "lu_part_hull_upgrade1": "Увеличивает здоровье\nДобавляет щиты для дополнительной защиты\nПозволяет менять стиль щитов",
-    "lu_part_hull_upgrade2": "Увеличивает здоровье на $1",
+    "lu_part_hull_upgrade2": "Увеличивает здоровье $1",
     "lu_part_hull_upgrade2_ashlands": "Добавляет защиту от океана Пепельных земель",
     "lu_part_shields_name": "Щиты",
     "lu_part_shields_switch": "Изменить стиль",

@@ -24,7 +24,7 @@
     "lu_part_container_upgrade2": "収納高さを広げます",
     "lu_part_hull_name": "船体",
     "lu_part_hull_upgrade1": "体力増加\n追加の防御のためにシールドを追加\nシールドのスタイルを変更できるようにします",
-    "lu_part_hull_upgrade2": "体力 $1 増加",
+    "lu_part_hull_upgrade2": "体力増加 $1",
     "lu_part_hull_upgrade2_ashlands": "アッシュランドの海からの防御を追加します",
     "lu_part_shields_name": "シールド",
     "lu_part_shields_switch": "スタイルを変更",

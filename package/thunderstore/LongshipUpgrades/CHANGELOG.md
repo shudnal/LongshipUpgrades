@@ -1,3 +1,7 @@
+# 1.0.9
+* little tweaks to translations
+* final fix for stray ship
+
 # 1.0.8
 * no more stray ships! Fixed ship not stopping after leaving the board when tent+lamp state was changed
 
