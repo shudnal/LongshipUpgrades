@@ -36,10 +36,12 @@ namespace LongshipUpgrades
         private GameObject m_turrets;
         private GameObject m_turretsUpgrade;
         private GameObject m_itemstandObject;
+        private GameObject m_wispUpgrade;
 
         private GameObject m_mast;
         private GameObject m_ropes;
         private GameObject m_sail;
+        private GameObject m_wisp;
 
         private MeshRenderer m_lampRenderer;
         private Light m_light;
@@ -67,6 +69,7 @@ namespace LongshipUpgrades
         public const string prefabName = "VikingShip";
         public const string turretName = "piece_turret";
         public const string moderBossStone = "BossStone_DragonQueen";
+        public const string wisptorchName = "piece_groundtorch_mist";
         private static bool prefabInitialized = false;
 
         private static Shader shaderStandard;
@@ -85,6 +88,8 @@ namespace LongshipUpgrades
         public static readonly int s_tentUpgraded = "TentUpgraded".GetStableHashCode();
         public static readonly int s_tentDisabled = "TentDisabled".GetStableHashCode();
         public static readonly int s_lightsDisabled = "LightDisabled".GetStableHashCode();
+        public static readonly int s_wispUpgraded = "WispUpgraded".GetStableHashCode();
+        public static readonly int s_wispRemoved = "WispRemoved".GetStableHashCode();
 
         public static readonly int s_containerUpgradedLvl1 = "ContainerUpgradedLvl1".GetStableHashCode();
         public static readonly int s_containerUpgradedLvl2 = "ContainerUpgradedLvl2".GetStableHashCode();
@@ -122,6 +127,7 @@ namespace LongshipUpgrades
         public const int lampDisable = 3;
         public const int turretsEnable = 4;
         public const int turretsDisable = 5;
+        public const int wisptorchEnable = 6;
 
         private static readonly Dictionary<GameObject, LongshipCustomizableParts> s_allInstances = new Dictionary<GameObject, LongshipCustomizableParts>();
 
@@ -191,10 +197,12 @@ namespace LongshipUpgrades
 
             m_mast?.SetActive(!m_zdo.GetBool(s_mastRemoved));
             m_ropes?.SetActive(m_mast.activeSelf);
+            m_wisp?.SetActive(m_mast.activeSelf && m_zdo.GetBool(s_wispUpgraded) && !m_zdo.GetBool(s_wispRemoved));
 
             m_beamTent?.SetActive(m_customMast && (lanternEnabled.Value || tentEnabled.Value));
             m_beamMast?.SetActive(!m_mast.activeSelf && m_beamTent != null && m_beamTent.activeInHierarchy);
             m_beamSailCollider?.SetActive((!m_beamMast || !m_beamMast.activeSelf) && m_mast.activeSelf);
+            m_wispUpgrade?.SetActive(wispEnabled.Value && m_mast.activeSelf);
 
             m_tent?.SetActive(m_customMast && tentEnabled.Value && m_zdo.GetBool(s_tentUpgraded) && !m_zdo.GetBool(s_tentDisabled));
             m_lantern?.SetActive(lanternEnabled.Value && m_customMast && m_zdo.GetBool(s_lanternUpgraded) && !m_zdo.GetBool(s_lanternDisabled));
@@ -1255,6 +1263,52 @@ namespace LongshipUpgrades
                 // Stand Awake call
                 m_itemstandObject.SetActive(true);
             }
+
+            GameObject wisptorchPrefab = ZNetScene.instance.GetPrefab(wisptorchName)?.gameObject;
+            if (wisptorchPrefab != null)
+            {
+                m_wisp = Instantiate(wisptorchPrefab.transform.Find("_enabled").gameObject, customize, worldPositionStays: false);
+                m_wisp.name = "wisptorch";
+                m_wisp.layer = piece_nonsolid;
+                m_wisp.SetActive(false);
+
+                m_wisp.transform.localScale = Vector3.one * 0.35f;
+                m_wisp.transform.localPosition = new Vector3(-0.125f, 4.77f, -0.002f);
+
+                Transform forceField = m_wisp.transform.Find("Particle System Force Field");
+
+                Demister demister = forceField.GetComponent<Demister>();
+                demister.m_disableForcefieldDelay = 0;
+                demister.CancelInvoke("DisableForcefield");
+
+                forceField.GetComponent<ParticleSystemForceField>().endRange = 13;
+
+                forceField.localPosition = new Vector3(-2f, -10f, 0f);
+
+                if (wispEnabled.Value)
+                {
+                    Transform wispControllerCollider = AddCollider(interactableParent, "wisp_controller", typeof(BoxCollider));
+                    wispControllerCollider.localPosition = new Vector3(-0.13f, 1.22f, 0f);
+                    wispControllerCollider.localScale = new Vector3(0.11f, 0.25f, 0.12f);
+
+                    m_wispUpgrade = wispControllerCollider.gameObject;
+                    m_wispUpgrade.layer = piece_nonsolid;
+                    m_wispUpgrade.SetActive(true);
+
+                    LongshipPartController wispController = wispControllerCollider.gameObject.AddComponent<LongshipPartController>();
+                    wispController.m_name = "$lu_part_wisp_name";
+                    wispController.m_zdoPartDisabled = s_wispRemoved;
+                    wispController.m_enableEffects = wisptorchEnable;
+                    wispController.m_disableEffects = woodSwitch;
+                    wispController.m_nview = m_nview;
+                    wispController.AddUpgradeRequirement(s_wispUpgraded,
+                                                         "$lu_part_wisp_upgrade",
+                                                         ParseRequirements(wispUpgradeRecipe.Value),
+                                                         wispStation.Value,
+                                                         wispStationLvl.Value,
+                                                         wispStationRange.Value);
+                }
+            }
         }
 
         public void OnDestroyed()
@@ -1519,6 +1573,7 @@ namespace LongshipUpgrades
             AddEffect(lampDisable, "fx_candle_off");
             AddEffect(turretsEnable, "fx_guardstone_permitted_add");
             AddEffect(turretsDisable, "fx_guardstone_permitted_removed");
+            AddEffect(wisptorchEnable, "sfx_demister_start");
 
             partEffects.m_effectPrefabs = effectPrefabs.ToArray();
 

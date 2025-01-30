@@ -95,6 +95,12 @@ namespace LongshipUpgrades
         internal static ConfigEntry<int> tentStationRange;
         internal static ConfigEntry<string> tentUpgradeRecipe;
 
+        internal static ConfigEntry<bool> wispEnabled;
+        internal static ConfigEntry<string> wispStation;
+        internal static ConfigEntry<int> wispStationLvl;
+        internal static ConfigEntry<int> wispStationRange;
+        internal static ConfigEntry<string> wispUpgradeRecipe;
+
         internal static ConfigEntry<bool> changeHead;
         internal static ConfigEntry<bool> changeShields;
         internal static ConfigEntry<bool> changeTent;
@@ -175,7 +181,7 @@ namespace LongshipUpgrades
             lanternStationLvl = config("Lantern", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
             lanternStationRange = config("Lantern", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
-            mastEnabled = config("Mast", "Enable upgrades", defaultValue: true, "Mast upgrade makes lantern and tent upgrades possible.");
+            mastEnabled = config("Mast", "Enable upgrades", defaultValue: true, "Mast upgrade also makes lantern, tent and wisp torch upgrades possible.");
             mastRemovable = config("Mast", "Make removable", defaultValue: true, "Enable mast removal. World restart or ship rebuild required to apply changes.");
             mastUpgradeRecipe = config("Mast", "Recipe", defaultValue: "RoundLog:2,IronNails:10,Finewood:4,Raspberries:2,Blueberries:2,Coal:2", "Mast upgrade recipe. World restart or ship rebuild required to apply changes.");
             mastStation = config("Mast", "Station name", defaultValue: "$piece_workbench", "Station name token. The center of the ship is the starting point of the check.");
@@ -189,6 +195,12 @@ namespace LongshipUpgrades
             tentStation = config("Tent", "Station name", defaultValue: "$piece_workbench", "Station name token. The center of the ship is the starting point of the check.");
             tentStationLvl = config("Tent", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
             tentStationRange = config("Tent", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            
+            wispEnabled = config("Wisp torch", "Enable upgrades", defaultValue: true, "Wisp torch pushes away the surrounding magic mist.");
+            wispUpgradeRecipe = config("Wisp torch", "Recipe", defaultValue: "YggdrasilWood:10,Wisp:5,Eitr:5", "Upgrade recipe. World restart or ship rebuild required to apply changes.");
+            wispStation = config("Wisp torch", "Station name", defaultValue: "$piece_magetable", "Station name token. The center of the ship is the starting point of the check.");
+            wispStationLvl = config("Wisp torch", "Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
+            wispStationRange = config("Wisp torch", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
             turretsEnabled = config("Turrets", "Enable upgrades", defaultValue: true, "Enable turrets upgrades.");
             turretsUpgradeRecipe = config("Turrets", "Recipe", defaultValue: "BlackMetal:15,YggdrasilWood:15,MechanicalSpring:5", "Turrets upgrade recipe. World restart or ship rebuild required to apply changes.");
