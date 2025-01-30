@@ -1,6 +1,6 @@
 {
     "lu_controller_message_enable": "Добавить",
-    "lu_controller_message_disable": "Удалить",
+    "lu_controller_message_disable": "Убрать",
     "lu_controller_message_switch": "Переключить",
     "lu_part_lantern_name": "Фонарь",
     "lu_part_lantern_enable": "Повесить",
@@ -37,5 +37,7 @@
     "lu_controller_message_unknownupgrade": "Неизвестное улучшение",
     "lu_controller_message_unknownitem": "Неизвестный предмет",
     "lu_box_name": "Ящик",
-    "lu_box_climb": "Залезть"
+    "lu_box_climb": "Залезть",
+    "lu_part_wisp_upgrade": "Установить на вершину мачты факел с магическим огоньком",
+    "lu_part_wisp_name":  "Светлячок"
 }

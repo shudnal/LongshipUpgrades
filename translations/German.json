@@ -37,5 +37,7 @@
     "lu_controller_message_unknownupgrade": "Unbekanntes Upgrade",
     "lu_controller_message_unknownitem": "Unbekannter Gegenstand",
     "lu_box_name": "Kiste",
-    "lu_box_climb": "Klettern"
+    "lu_box_climb": "Klettern",
+    "lu_part_wisp_upgrade": "Platziere eine Irrlichtfakel auf der Spitze des Mastes",
+    "lu_part_wisp_name":  "Irrlicht"
 }

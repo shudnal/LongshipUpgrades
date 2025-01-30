@@ -37,5 +37,7 @@
     "lu_controller_message_unknownupgrade": "不明なアップグレード",
     "lu_controller_message_unknownitem": "不明なアイテム",
     "lu_box_name": "ボックス",
-    "lu_box_climb": "登る"
+    "lu_box_climb": "登る",
+    "lu_part_wisp_upgrade": "ウィスプトーチをマストの上部に取り付けます",
+    "lu_part_wisp_name":  "ウィスプ"
 }

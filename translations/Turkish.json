@@ -37,5 +37,7 @@
     "lu_controller_message_unknownupgrade": "Bilinmeyen yükseltme",
     "lu_controller_message_unknownitem": "Bilinmeyen öğe",
     "lu_box_name": "Kutu",
-    "lu_box_climb": "Tırman"
+    "lu_box_climb": "Tırman",
+    "lu_part_wisp_upgrade": "Peri meşalesi direğinin tepesine monte edin",
+    "lu_part_wisp_name":  "Peri"
 }

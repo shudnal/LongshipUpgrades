@@ -37,5 +37,7 @@
     "lu_controller_message_unknownupgrade": "Atualização desconhecida",
     "lu_controller_message_unknownitem": "Item desconhecido",
     "lu_box_name": "Caixa",
-    "lu_box_climb": "Escalar"
+    "lu_box_climb": "Escalar",
+    "lu_part_wisp_upgrade": "Instale a tocha de Wisp no topo do mastro.",
+    "lu_part_wisp_name":  "Wisp"
 }

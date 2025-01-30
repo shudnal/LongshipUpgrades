@@ -37,5 +37,7 @@
     "lu_controller_message_unknownupgrade": "未知升级",
     "lu_controller_message_unknownitem": "未知物品",
     "lu_box_name": "盒子",
-    "lu_box_climb": "爬升"
+    "lu_box_climb": "爬升",
+    "lu_part_wisp_upgrade": "在桅杆顶部放置一支燃烧着魔法火焰的火炬",
+    "lu_part_wisp_name":  "冥火"
 }

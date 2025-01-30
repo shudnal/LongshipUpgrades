@@ -37,5 +37,7 @@
     "lu_controller_message_unknownupgrade": "Nieznana aktualizacja",
     "lu_controller_message_unknownitem": "Nieznany przedmiot",
     "lu_box_name": "Skrzynia",
-    "lu_box_climb": "Wspinaj się"
+    "lu_box_climb": "Wspinaj się",
+    "lu_part_wisp_upgrade": "Umieść pochodnię z magicznym blaskiem na szczycie masztu",
+    "lu_part_wisp_name":  "Ognik"
 }

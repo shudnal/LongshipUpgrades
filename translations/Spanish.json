@@ -37,5 +37,7 @@
     "lu_controller_message_unknownupgrade": "Mejora desconocida",
     "lu_controller_message_unknownitem": "Elemento desconocido",
     "lu_box_name": "Caja",
-    "lu_box_climb": "Escalar"
+    "lu_box_climb": "Escalar",
+    "lu_part_wisp_upgrade": "Monte la antorcha de Wisp en la parte superior del mástil.",
+    "lu_part_wisp_name":  "Wisp"
 }
