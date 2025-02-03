@@ -16,7 +16,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.9";
+        public const string pluginVersion = "1.1.0";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -277,6 +277,9 @@ namespace LongshipUpgrades
 
                 File.WriteAllBytes(Path.Combine(tents, "tent_01.png"), GetEmbeddedFileData("tent_01.png"));
                 File.WriteAllBytes(Path.Combine(tents, "tent_02.png"), GetEmbeddedFileData("tent_02.png"));
+                File.WriteAllBytes(Path.Combine(tents, "tent_03.png"), GetEmbeddedFileData("tent_03.png"));
+                File.WriteAllBytes(Path.Combine(tents, "tent_04.png"), GetEmbeddedFileData("tent_04.png"));
+                File.WriteAllBytes(Path.Combine(tents, "tent_05.png"), GetEmbeddedFileData("tent_05.png"));
             }
 
             string sails = Path.Combine(configDirectory, sailsDirectory);
@@ -286,10 +289,18 @@ namespace LongshipUpgrades
 
                 File.WriteAllBytes(Path.Combine(sails, "sail_01.png"), GetEmbeddedFileData("sail_01.png"));
                 File.WriteAllBytes(Path.Combine(sails, "sail_02.png"), GetEmbeddedFileData("sail_02.png"));
+                File.WriteAllBytes(Path.Combine(sails, "sail_03.png"), GetEmbeddedFileData("sail_03.png"));
+                File.WriteAllBytes(Path.Combine(sails, "sail_04.png"), GetEmbeddedFileData("sail_04.png"));
+                File.WriteAllBytes(Path.Combine(sails, "sail_05.png"), GetEmbeddedFileData("sail_05.png"));
             }
 
             string shields = Path.Combine(configDirectory, shieldsDirectory);
-            Directory.CreateDirectory(shields);
+            if (!Directory.Exists(shields))
+            {
+                Directory.CreateDirectory(shields);
+
+                File.WriteAllBytes(Path.Combine(shields, "shields_01.png"), GetEmbeddedFileData("shields_01.png"));
+            }
 
             foreach (FileInfo tent in new DirectoryInfo(tents).EnumerateFiles().OrderBy(file => file.Name))
                 LongshipCustomizableParts.AddCustomTent(Path.Combine(tentsDirectory, tent.Name));

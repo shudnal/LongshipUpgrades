@@ -1,3 +1,7 @@
+# 1.1.0
+* new upgrade - wisp torch on mast
+* big thanks to Ephemeral for adding more vanillaish color variants for sails, tent and shields
+
 # 1.0.9
 * little tweaks to translations
 * final fix for stray ship

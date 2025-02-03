@@ -129,5 +129,8 @@ Or [Official BepInEx Configuration Manager](https://valheim.thunderstore.io/pack
 ## Mirrors
 [Nexus](https://www.nexusmods.com/valheim/mods/2885)
 
+## Credits
+* Ephemeral for allowing to use their green, yellow and black vanillaish variants
+
 ## Donation
 [Buy Me a Coffee](https://buymeacoffee.com/shudnal)
