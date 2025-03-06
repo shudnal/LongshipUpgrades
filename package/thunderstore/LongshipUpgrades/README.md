@@ -18,6 +18,7 @@ Every mentioned upgrade is highly customizable.
 * upgrade ship's storage in 2 steps increasing its width and height by 1. Yet that handy extra storage comes at a cost of deck cluttering.
 * switch between different styles of ship's heads, sails, tents and shields. Upload your own custom textures with ease.
 * you can always remove tent if it interferes with movement on the deck
+* place Wisp Torch on the top of the mast to push away the mist
 
 Upgrade materials spend will use craft from containers feature if it is implemented correctly. 
 

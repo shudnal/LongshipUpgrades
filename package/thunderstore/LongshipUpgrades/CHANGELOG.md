@@ -1,6 +1,8 @@
-# 1.1.0
+# 1.0.10
 * new upgrade - wisp torch on mast
 * big thanks to Ephemeral for adding more vanillaish color variants for sails, tent and shields
+* ServerSync updated
+* patch 0.220.3
 
 # 1.0.9
 * little tweaks to translations
