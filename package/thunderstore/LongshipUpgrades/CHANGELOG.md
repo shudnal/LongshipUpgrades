@@ -1,3 +1,6 @@
+# 1.0.11
+* fixed issue with texture loading on Awake
+
 # 1.0.10
 * new upgrade - wisp torch on mast
 * big thanks to Ephemeral for adding more vanillaish color variants for sails, tent and shields
