@@ -42,6 +42,7 @@ namespace LongshipUpgrades
         private GameObject m_ropes;
         private GameObject m_sail;
         private GameObject m_wisp;
+        private GameObject m_mapTable;
 
         private MeshRenderer m_lampRenderer;
         private Light m_light;
@@ -70,12 +71,19 @@ namespace LongshipUpgrades
         public const string turretName = "piece_turret";
         public const string moderBossStone = "BossStone_DragonQueen";
         public const string wisptorchName = "piece_groundtorch_mist";
+        public const string mapTablePrefabName = "maptable";
         private static bool prefabInitialized = false;
 
         private static Shader shaderStandard;
         private static Material standSharedMaterial;
         private static Material storageSharedMaterial;
         private static Material plankSharedMaterial;
+
+        private static GameObject s_lanternPrefab;
+        private static GameObject s_turretPrefab;
+        private static GameObject s_standBossDragonPrefab;
+        private static GameObject s_wisptorchPrefab;
+        private static GameObject s_mapTablePrefab;
 
         private static Color flareColor;
         private static bool isNightTime;
@@ -164,6 +172,8 @@ namespace LongshipUpgrades
             }
 
             CheckEffects();
+
+            GetHildirMapTable();
 
             s_allInstances.Add(base.gameObject, this);
         }
@@ -803,8 +813,8 @@ namespace LongshipUpgrades
                     }
             }
 
-            GameObject lanternItem = ObjectDB.instance.GetItemPrefab("Lantern")?.transform.Find("attach/equiped")?.gameObject;
-            if (lanternItem)
+            s_lanternPrefab ??= ObjectDB.instance.GetItemPrefab("Lantern")?.transform.Find("attach/equiped")?.gameObject;
+            if (s_lanternPrefab)
             {
                 m_lantern = new GameObject("Lantern")
                 {
@@ -815,7 +825,7 @@ namespace LongshipUpgrades
                 lanternParent.SetParent(customize, worldPositionStays: false);
                 lanternParent.localScale = Vector3.one * 0.45f;
 
-                Transform lantern = Instantiate(lanternItem, lanternParent).transform;
+                Transform lantern = Instantiate(s_lanternPrefab, lanternParent).transform;
                 lantern.name = "Lamp";
                 lantern.localPosition = new Vector3(0.23f, 1.9f, 0f);
                 lantern.gameObject.layer = vehicle;
@@ -1127,8 +1137,8 @@ namespace LongshipUpgrades
                 headsController.m_switchEffects = woodSwitch;
             }
 
-            GameObject pieceTurret = Resources.FindObjectsOfTypeAll<Turret>().FirstOrDefault(ws => ws.name == turretName)?.gameObject;
-            if (pieceTurret != null)
+            s_turretPrefab ??= Resources.FindObjectsOfTypeAll<Turret>().FirstOrDefault(ws => ws.name == turretName)?.gameObject;
+            if (s_turretPrefab != null)
             {
                 m_turrets = new GameObject("turrets")
                 {
@@ -1161,7 +1171,7 @@ namespace LongshipUpgrades
                                                         turretsStationLvl.Value,
                                                         turretsStationRange.Value);
 
-                GameObject turret_right = Instantiate(pieceTurret.transform.Find("New").gameObject, turretsParent, worldPositionStays: false);
+                GameObject turret_right = Instantiate(s_turretPrefab.transform.Find("New").gameObject, turretsParent, worldPositionStays: false);
                 turret_right.name = "turret_right";
                 turret_right.layer = piece_nonsolid;
                 turret_right.SetActive(true);
@@ -1181,7 +1191,7 @@ namespace LongshipUpgrades
                 turret_left.transform.localPosition = new Vector3(-3.3f, -0.01f, -0.53f);
                 turret_left.transform.localEulerAngles = new Vector3(0f, 190f, 0f);
 
-                Turret original = pieceTurret.GetComponent<Turret>();
+                Turret original = s_turretPrefab.GetComponent<Turret>();
                 ShipTurret.m_shootEffect = original.m_shootEffect;
                 ShipTurret.m_addAmmoEffect = original.m_addAmmoEffect;
                 ShipTurret.m_reloadEffect = original.m_reloadEffect;
@@ -1194,8 +1204,8 @@ namespace LongshipUpgrades
                 turret_left.AddComponent<ShipTurret>().SetPositionAtShip(isLeft: true).FillAllowedAmmo(original.m_allowedAmmo).m_destroyedLootPrefab = m_destroyedLootPrefab;
             }
 
-            GameObject standBossDragon = Resources.FindObjectsOfTypeAll<ItemStand>().FirstOrDefault(ws => ws.transform.root.gameObject.name == moderBossStone)?.gameObject;
-            if (standBossDragon != null)
+            s_standBossDragonPrefab ??= Resources.FindObjectsOfTypeAll<ItemStand>().FirstOrDefault(ws => ws.transform.root.gameObject.name == moderBossStone)?.gameObject;
+            if (s_standBossDragonPrefab != null)
             {
                 m_itemstandObject = new GameObject("ItemStand_Bow")
                 {
@@ -1206,7 +1216,7 @@ namespace LongshipUpgrades
                 standParent.SetParent(customize, worldPositionStays: false);
                 m_itemstandObject.SetActive(false);
 
-                GameObject itemstand = Instantiate(standBossDragon, standParent, worldPositionStays: false);
+                GameObject itemstand = Instantiate(s_standBossDragonPrefab, standParent, worldPositionStays: false);
                 itemstand.name = "itemstand";
                 itemstand.layer = piece_nonsolid;
                 Destroy(itemstand.transform.Find("model/wood_pole (2)").gameObject);
@@ -1264,10 +1274,10 @@ namespace LongshipUpgrades
                 m_itemstandObject.SetActive(true);
             }
 
-            GameObject wisptorchPrefab = ZNetScene.instance.GetPrefab(wisptorchName)?.gameObject;
-            if (wisptorchPrefab != null)
+            s_wisptorchPrefab ??= ZNetScene.instance.GetPrefab(wisptorchName)?.gameObject;
+            if (s_wisptorchPrefab != null)
             {
-                m_wisp = Instantiate(wisptorchPrefab.transform.Find("_enabled").gameObject, customize, worldPositionStays: false);
+                m_wisp = Instantiate(s_wisptorchPrefab.transform.Find("_enabled").gameObject, customize, worldPositionStays: false);
                 m_wisp.name = "wisptorch";
                 m_wisp.layer = piece_nonsolid;
                 m_wisp.SetActive(false);
@@ -1308,6 +1318,34 @@ namespace LongshipUpgrades
                                                          wispStationLvl.Value,
                                                          wispStationRange.Value);
                 }
+            }
+
+            if (s_mapTablePrefab != null)
+            {
+                m_mapTable = Instantiate(s_mapTablePrefab, customize, worldPositionStays: false);
+                m_mapTable.name = mapTablePrefabName;
+                m_mapTable.layer = piece_nonsolid;
+                m_mapTable.SetActive(false);
+
+                m_mapTable.transform.localScale = Vector3.one * 0.45f;
+                m_mapTable.transform.localPosition = new Vector3(-1.15f, -0.05f, -0.73f);
+                m_mapTable.transform.localEulerAngles = new Vector3(0f, 332.6f, 0f);
+
+                MapTable mapTable = m_mapTable.GetComponent<MapTable>();
+
+                mapTable.m_nview = m_nview;
+                mapTable.m_nview.Register<ZPackage>("MapData", mapTable.RPC_MapData);
+
+                mapTable.m_readSwitch = mapTable.transform.Find("ReadMap").GetComponent<Switch>();
+                mapTable.m_readSwitch.m_onUse = (Switch.Callback)Delegate.Combine(mapTable.m_readSwitch.m_onUse, new Switch.Callback(mapTable.OnRead));
+                mapTable.m_readSwitch.m_onHover = (Switch.TooltipCallback)Delegate.Combine(mapTable.m_readSwitch.m_onHover, new Switch.TooltipCallback(mapTable.GetReadHoverText));
+
+                mapTable.m_writeSwitch = mapTable.transform.Find("WriteMap").GetComponent<Switch>();
+                mapTable.m_writeSwitch.m_onUse = (Switch.Callback)Delegate.Combine(mapTable.m_writeSwitch.m_onUse, new Switch.Callback(mapTable.OnWrite));
+                mapTable.m_writeSwitch.m_onHover = (Switch.TooltipCallback)Delegate.Combine(mapTable.m_writeSwitch.m_onHover, new Switch.TooltipCallback(mapTable.GetWriteHoverText));
+
+                // WIP
+                m_mapTable.SetActive(true);
             }
         }
 
@@ -1447,6 +1485,14 @@ namespace LongshipUpgrades
         internal static void OnGlobalDestroy()
         {
             shaderStandard = null;
+
+            s_lanternPrefab = null;
+            s_turretPrefab = null;
+            s_standBossDragonPrefab = null;
+            s_wisptorchPrefab = null;
+            
+            Destroy(s_mapTablePrefab);
+            s_mapTablePrefab = null;
         }
 
         private static void FixPrefab()
@@ -1611,6 +1657,56 @@ namespace LongshipUpgrades
             float y = float.Parse(array[1].Replace('.', ','));
             float z = float.Parse(array[2].Replace('.', ','));
             return new Vector3(x, y, z);
+        }
+
+        private static void GetHildirMapTable()
+        {
+            if (s_mapTablePrefab)
+                return;
+
+            ZoneSystem.ZoneLocation hildir = ZoneSystem.instance.m_locations.Find(loc => loc.m_prefabName == "Hildir_camp");
+            if (hildir == null || !hildir.m_prefab.IsValid)
+                return;
+
+            hildir.m_prefab.Load();
+            s_mapTablePrefab = Instantiate(hildir.m_prefab.Asset.transform.Find("stuff/hildir_maptable")?.gameObject);
+            s_mapTablePrefab.name = "LongshipUpgrades_MapTable";
+            s_mapTablePrefab.SetActive(false);
+
+            hildir.m_prefab.Release();
+
+            Transform model = s_mapTablePrefab.transform.Find("default");
+
+            DestroyImmediate(model.GetComponent<MeshCollider>());
+            DestroyImmediate(s_mapTablePrefab.GetComponent<Vegvisir>());
+            DestroyImmediate(s_mapTablePrefab.GetComponent<LODGroup>());
+            DestroyImmediate(s_mapTablePrefab.transform.Find("low")?.gameObject);
+
+            FixMeshRendererProperties(model.GetComponent<MeshRenderer>());
+
+            Transform readMap = AddCollider(s_mapTablePrefab.transform, "ReadMap", typeof(BoxCollider));
+            readMap.localPosition = new Vector3(-0.2f, 0.9f, 0f);
+            readMap.localScale = new Vector3(0.4f, 0.1f, 0.6f);
+
+            Switch readSwitch = readMap.gameObject.AddComponent<Switch>();
+            readSwitch.m_name = "$piece_cartographytable";
+
+            readMap.gameObject.layer = piece_nonsolid;
+            readMap.gameObject.SetActive(true);
+
+            Transform writeMap = AddCollider(s_mapTablePrefab.transform, "WriteMap", typeof(BoxCollider));
+            writeMap.localPosition = new Vector3(0.2f, 0.9f, 0f);
+            writeMap.localScale = new Vector3(0.4f, 0.1f, 0.6f);
+
+            Switch writeSwitch = writeMap.gameObject.AddComponent<Switch>();
+            writeSwitch.m_name = "$piece_cartographytable";
+
+            writeMap.gameObject.layer = piece_nonsolid;
+            writeMap.gameObject.SetActive(true);
+
+            MapTable maptable = s_mapTablePrefab.AddComponent<MapTable>();
+            maptable.m_writeEffects = ZNetScene.instance.GetPrefab("piece_cartographytable")?.GetComponent<MapTable>()?.m_writeEffects;
+            maptable.m_name = "$piece_cartographytable";
         }
     }
 }

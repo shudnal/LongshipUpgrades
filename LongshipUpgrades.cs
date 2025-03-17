@@ -16,7 +16,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.11";
+        public const string pluginVersion = "1.0.12";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -539,6 +539,120 @@ namespace LongshipUpgrades
                     character.UpdateWalking(Time.deltaTime);
                 }
             }
+        }
+
+        [HarmonyPatch(typeof(MapTable), nameof(MapTable.OnWrite))]
+        public static class MapTable_OnWrite_ScaleWriteEffects
+        {
+            public static bool inCall = false;
+
+            public static void Prefix(MapTable __instance) => inCall = __instance.name == LongshipCustomizableParts.mapTablePrefabName && IsControlledComponent(__instance);
+
+            public static void Postfix() => inCall = false;
+        }
+
+        [HarmonyPatch(typeof(EffectList), nameof(EffectList.Create))]
+        public static class EffectList_Create_ScaleWriteEffects
+        {
+            public static void Prefix(EffectList __instance, ref float scale, ref bool __state)
+            {
+                if (MapTable_OnWrite_ScaleWriteEffects.inCall)
+                {
+                    scale = 0.1f;
+                    if (__instance.HasEffects() && !__instance.m_effectPrefabs[0].m_scale)
+                    {
+                        __state = true;
+                        __instance.m_effectPrefabs[0].m_scale = true;
+                    }
+                }
+            }
+
+            public static void Postfix(EffectList __instance, bool __state)
+            {
+                if (__state)
+                    __instance.m_effectPrefabs[0].m_scale = false;
+            }
+        }
+
+        [HarmonyPatch(typeof(MapTable), nameof(MapTable.Start))]
+        public static class MapTable_Start_PreventStartScript
+        {
+            [HarmonyPriority(Priority.First)]
+            public static bool Prefix(MapTable __instance) => __instance.name != LongshipCustomizableParts.mapTablePrefabName || !IsControlledComponent(__instance);
+        }
+
+        public static void FixMeshRendererProperties(MeshRenderer renderer)
+        {
+            renderer.sharedMaterial = DeepCopyMaterial(renderer.sharedMaterial);
+            if (renderer.GetComponent<MeshFilter>() is  MeshFilter meshFilter)
+                FixSharedMesh(meshFilter);
+        }
+
+        private static Texture2D CopyTexture(Texture2D source)
+        {
+            if (source == null)
+                return null;
+
+            RenderTexture rt = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Default);
+            
+            Graphics.Blit(source, rt);
+
+            Texture2D copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, source.mipmapCount > 1);
+
+            RenderTexture.active = rt;
+            copy.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+            copy.filterMode = source.filterMode;
+            copy.Apply(true, true);
+            RenderTexture.active = null;
+
+            RenderTexture.ReleaseTemporary(rt);
+
+            return copy;
+        }
+
+        private static Material DeepCopyMaterial(Material original)
+        {
+            Material copy = new Material(original.shader);
+
+            copy.CopyPropertiesFromMaterial(original);
+
+            CopyTextureIfExists(original, copy, "_MainTex");
+            CopyTextureIfExists(original, copy, "_MetallicGlossMap");
+            CopyTextureIfExists(original, copy, "_EmissionMap");
+            CopyTextureIfExists(original, copy, "_BumpMap");
+            CopyTextureIfExists(original, copy, "_StyleTex");
+            CopyTextureIfExists(original, copy, "_NoiseGlowTex");
+
+            return copy;
+        }
+
+        private static void CopyTextureIfExists(Material original, Material copy, string propertyName)
+        {
+            if (!original.HasProperty(propertyName))
+                return;
+
+            Texture2D originalTexture = original.GetTexture(propertyName) as Texture2D;
+            if (originalTexture == null)
+                return;
+
+            copy.SetTexture(propertyName, CopyTexture(originalTexture));
+        }
+
+        private static void FixSharedMesh(MeshFilter meshFilter)
+        {
+            Mesh newMesh = new Mesh
+            {
+                vertices = meshFilter.sharedMesh.vertices,
+                triangles = meshFilter.sharedMesh.triangles,
+                normals = meshFilter.sharedMesh.normals,
+                uv = meshFilter.sharedMesh.uv,
+                uv2 = meshFilter.sharedMesh.uv2,
+                tangents = meshFilter.sharedMesh.tangents,
+                colors = meshFilter.sharedMesh.colors
+            };
+
+            meshFilter.mesh = newMesh;
+            meshFilter.sharedMesh = newMesh;
         }
     }
 }

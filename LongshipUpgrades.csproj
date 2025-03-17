@@ -67,6 +67,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Libs\ServerSync.dll</HintPath>
     </Reference>
+    <Reference Include="SoftReferenceableAssets, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\stable\SoftReferenceableAssets.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\Assemblies\stable\UnityEngine.dll</HintPath>
     </Reference>
