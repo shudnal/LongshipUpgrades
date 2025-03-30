@@ -584,7 +584,7 @@ namespace LongshipUpgrades
         public static void FixMeshRendererProperties(MeshRenderer renderer)
         {
             renderer.sharedMaterial = DeepCopyMaterial(renderer.sharedMaterial);
-            if (renderer.GetComponent<MeshFilter>() is  MeshFilter meshFilter)
+            if (renderer.GetComponent<MeshFilter>() is MeshFilter meshFilter)
                 FixSharedMesh(meshFilter);
         }
 
@@ -593,19 +593,24 @@ namespace LongshipUpgrades
             if (source == null)
                 return null;
 
-            RenderTexture rt = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Default);
-            
-            Graphics.Blit(source, rt);
-
             Texture2D copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, source.mipmapCount > 1);
+            
+            RenderTexture rt = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Default);
 
-            RenderTexture.active = rt;
-            copy.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
-            copy.filterMode = source.filterMode;
-            copy.Apply(true, true);
-            RenderTexture.active = null;
+            try
+            {
+                Graphics.Blit(source, rt);
 
-            RenderTexture.ReleaseTemporary(rt);
+                RenderTexture.active = rt;
+                copy.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+                copy.Apply(true, true);
+                copy.filterMode = source.filterMode;
+            }
+            finally
+            {
+                RenderTexture.active = null;
+                RenderTexture.ReleaseTemporary(rt);
+            }
 
             return copy;
         }
@@ -616,12 +621,8 @@ namespace LongshipUpgrades
 
             copy.CopyPropertiesFromMaterial(original);
 
-            CopyTextureIfExists(original, copy, "_MainTex");
-            CopyTextureIfExists(original, copy, "_MetallicGlossMap");
-            CopyTextureIfExists(original, copy, "_EmissionMap");
-            CopyTextureIfExists(original, copy, "_BumpMap");
-            CopyTextureIfExists(original, copy, "_StyleTex");
-            CopyTextureIfExists(original, copy, "_NoiseGlowTex");
+            foreach (string propertyName in original.GetTexturePropertyNames())
+                CopyTextureIfExists(original, copy, propertyName);
 
             return copy;
         }
@@ -640,6 +641,9 @@ namespace LongshipUpgrades
 
         private static void FixSharedMesh(MeshFilter meshFilter)
         {
+            if (meshFilter.sharedMesh == null)
+                return;
+
             Mesh newMesh = new Mesh
             {
                 vertices = meshFilter.sharedMesh.vertices,
@@ -648,8 +652,16 @@ namespace LongshipUpgrades
                 uv = meshFilter.sharedMesh.uv,
                 uv2 = meshFilter.sharedMesh.uv2,
                 tangents = meshFilter.sharedMesh.tangents,
-                colors = meshFilter.sharedMesh.colors
+                colors = meshFilter.sharedMesh.colors,
+                bindposes = meshFilter.sharedMesh.bindposes,
+                boneWeights = meshFilter.sharedMesh.boneWeights,
+                subMeshCount = meshFilter.sharedMesh.subMeshCount
             };
+
+            for (int i = 0; i < meshFilter.sharedMesh.subMeshCount; i++)
+                newMesh.SetTriangles(meshFilter.sharedMesh.GetTriangles(i), i);
+
+            newMesh.RecalculateBounds();
 
             meshFilter.mesh = newMesh;
             meshFilter.sharedMesh = newMesh;

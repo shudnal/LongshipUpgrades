@@ -1669,20 +1669,21 @@ namespace LongshipUpgrades
                 return;
 
             hildir.m_prefab.Load();
+
             s_mapTablePrefab = Instantiate(hildir.m_prefab.Asset.transform.Find("stuff/hildir_maptable")?.gameObject);
             s_mapTablePrefab.name = "LongshipUpgrades_MapTable";
             s_mapTablePrefab.SetActive(false);
 
-            hildir.m_prefab.Release();
-
             Transform model = s_mapTablePrefab.transform.Find("default");
+
+            FixMeshRendererProperties(model.GetComponent<MeshRenderer>());
+
+            hildir.m_prefab.Release();
 
             DestroyImmediate(model.GetComponent<MeshCollider>());
             DestroyImmediate(s_mapTablePrefab.GetComponent<Vegvisir>());
             DestroyImmediate(s_mapTablePrefab.GetComponent<LODGroup>());
             DestroyImmediate(s_mapTablePrefab.transform.Find("low")?.gameObject);
-
-            FixMeshRendererProperties(model.GetComponent<MeshRenderer>());
 
             Transform readMap = AddCollider(s_mapTablePrefab.transform, "ReadMap", typeof(BoxCollider));
             readMap.localPosition = new Vector3(-0.2f, 0.9f, 0f);
