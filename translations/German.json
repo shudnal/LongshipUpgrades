@@ -39,5 +39,7 @@
     "lu_box_name": "Kiste",
     "lu_box_climb": "Klettern",
     "lu_part_wisp_upgrade": "Platziere eine Irrlichtfakel auf der Spitze des Mastes",
-    "lu_part_wisp_name":  "Irrlicht"
+    "lu_part_wisp_name":  "Irrlicht",
+    "lu_part_maptable_name": "Kartografietisch",
+    "lu_part_maptable_upgrade": "Mit diesem Tisch kannst du deine Erkundungen der 10. Welt aufzeichnen und teilen."
 }

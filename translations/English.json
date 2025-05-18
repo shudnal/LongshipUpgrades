@@ -39,5 +39,7 @@
     "lu_box_name": "Box",
     "lu_box_climb": "Climb",
     "lu_part_wisp_upgrade": "Mount the wisp torch to the top of the mast",
-    "lu_part_wisp_name":  "Wisp"
+    "lu_part_wisp_name":  "Wisp",
+    "lu_part_maptable_name": "Small cartography table",
+    "lu_part_maptable_upgrade": "With this table you can record and share your explorations of the tenth world."
 }

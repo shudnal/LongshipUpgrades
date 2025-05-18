@@ -101,6 +101,12 @@ namespace LongshipUpgrades
         internal static ConfigEntry<int> wispStationRange;
         internal static ConfigEntry<string> wispUpgradeRecipe;
 
+        internal static ConfigEntry<bool> mapTableEnabled;
+        internal static ConfigEntry<string> mapTableStation;
+        internal static ConfigEntry<int> mapTableStationLvl;
+        internal static ConfigEntry<int> mapTableStationRange;
+        internal static ConfigEntry<string> mapTableUpgradeRecipe;
+
         internal static ConfigEntry<bool> changeHead;
         internal static ConfigEntry<bool> changeShields;
         internal static ConfigEntry<bool> changeTent;
@@ -212,6 +218,12 @@ namespace LongshipUpgrades
             itemStandDisableSpeaking = config("Item stand", "Trophy speaking disabled", defaultValue: false, "Trophis will not do random speak. World restart or ship rebuild required to apply changes.");
             itemStandTrophyRescale = config("Item stand", "Trophy rescale", defaultValue: "TrophyBonemass:0,7;TrophyBonemawSerpent:0,7;TrophySeekerQueen:0,7;TrophyGoblinKing:0,7", "Some trophies are ginormous. Set smaller scale for them. Trophy rehook required to apply changes.");
             itemStandForsakenPower = config("Item stand", "Forsaken power enabled", defaultValue: true, "Boss trophies brings an option to cast another Forsaken power while on ship.");
+
+            mapTableEnabled = config("Map table", "Enable upgrades", defaultValue: true, "Cartography table allows to exchange map data between players.");
+            mapTableUpgradeRecipe = config("Map table", "Recipe", defaultValue: "FineWood:10,Bronze:2,LeatherScraps:5,Raspberry:4", "Upgrade recipe. World restart or ship rebuild required to apply changes.");
+            mapTableStation = config("Map table", "Station name", defaultValue: "$piece_forge", "Station name token. The center of the ship is the starting point of the check.");
+            mapTableStationLvl = config("Map table", "Station level", defaultValue: 3, "Station level. At least one station in the range must meet the level requirement.");
+            mapTableStationRange = config("Map table", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
             changeHead = config("Style", "Change heads", defaultValue: true, "Change ship's head style.");
             changeShields = config("Style", "Change shields color", defaultValue: true, "Change shields colors. World restart or ship rebuild required to apply changes.");

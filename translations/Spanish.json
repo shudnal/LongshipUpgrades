@@ -39,5 +39,7 @@
     "lu_box_name": "Caja",
     "lu_box_climb": "Escalar",
     "lu_part_wisp_upgrade": "Monte la antorcha de Wisp en la parte superior del mástil.",
-    "lu_part_wisp_name":  "Wisp"
+    "lu_part_wisp_name":  "Wisp",
+    "lu_part_maptable_name": "Mesa de cartografía",
+    "lu_part_maptable_upgrade": "Con esta mesa puedes anotar y compartir tus exploraciones del 10.º mundo."
 }

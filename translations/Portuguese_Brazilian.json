@@ -39,5 +39,7 @@
     "lu_box_name": "Caixa",
     "lu_box_climb": "Escalar",
     "lu_part_wisp_upgrade": "Instale a tocha de Wisp no topo do mastro.",
-    "lu_part_wisp_name":  "Wisp"
+    "lu_part_wisp_name":  "Wisp",
+    "lu_part_maptable_name": "Mesa de cartografia",
+    "lu_part_maptable_upgrade": "Com esta mesa, é possível registrar e compartilhar sua exploração do 10° Mundo."
 }

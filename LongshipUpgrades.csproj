@@ -108,7 +108,6 @@
     <EmbeddedResource Include="Assets\tent_04.png" />
     <EmbeddedResource Include="Assets\tent_05.png" />
     <Content Include="Libs\LocalizationManager.dll" />
-    <Content Include="Libs\ServerSync.dll" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ILRepack.Lib.MSBuild.Task">

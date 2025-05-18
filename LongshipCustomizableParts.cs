@@ -37,6 +37,7 @@ namespace LongshipUpgrades
         private GameObject m_turretsUpgrade;
         private GameObject m_itemstandObject;
         private GameObject m_wispUpgrade;
+        private GameObject m_mapTableUpgrade;
 
         private GameObject m_mast;
         private GameObject m_ropes;
@@ -98,6 +99,7 @@ namespace LongshipUpgrades
         public static readonly int s_lightsDisabled = "LightDisabled".GetStableHashCode();
         public static readonly int s_wispUpgraded = "WispUpgraded".GetStableHashCode();
         public static readonly int s_wispRemoved = "WispRemoved".GetStableHashCode();
+        public static readonly int s_mapTableUpgraded = "MapTableUpgraded".GetStableHashCode();
 
         public static readonly int s_containerUpgradedLvl1 = "ContainerUpgradedLvl1".GetStableHashCode();
         public static readonly int s_containerUpgradedLvl2 = "ContainerUpgradedLvl2".GetStableHashCode();
@@ -207,12 +209,14 @@ namespace LongshipUpgrades
 
             m_mast?.SetActive(!m_zdo.GetBool(s_mastRemoved));
             m_ropes?.SetActive(m_mast.activeSelf);
-            m_wisp?.SetActive(m_mast.activeSelf && m_zdo.GetBool(s_wispUpgraded) && !m_zdo.GetBool(s_wispRemoved));
+            m_wisp?.SetActive(wispEnabled.Value && m_mast.activeSelf && m_zdo.GetBool(s_wispUpgraded) && !m_zdo.GetBool(s_wispRemoved));
+            m_mapTable?.SetActive(mapTableEnabled.Value && m_zdo.GetBool(s_mapTableUpgraded));
 
             m_beamTent?.SetActive(m_customMast && (lanternEnabled.Value || tentEnabled.Value));
             m_beamMast?.SetActive(!m_mast.activeSelf && m_beamTent != null && m_beamTent.activeInHierarchy);
             m_beamSailCollider?.SetActive((!m_beamMast || !m_beamMast.activeSelf) && m_mast.activeSelf);
             m_wispUpgrade?.SetActive(wispEnabled.Value && m_mast.activeSelf);
+            m_mapTableUpgrade?.SetActive(mapTableEnabled.Value && !m_mapTable.activeSelf);
 
             m_tent?.SetActive(m_customMast && tentEnabled.Value && m_zdo.GetBool(s_tentUpgraded) && !m_zdo.GetBool(s_tentDisabled));
             m_lantern?.SetActive(lanternEnabled.Value && m_customMast && m_zdo.GetBool(s_lanternUpgraded) && !m_zdo.GetBool(s_lanternDisabled));
@@ -1328,8 +1332,8 @@ namespace LongshipUpgrades
                 m_mapTable.SetActive(false);
 
                 m_mapTable.transform.localScale = Vector3.one * 0.45f;
-                m_mapTable.transform.localPosition = new Vector3(-1.15f, -0.05f, -0.73f);
-                m_mapTable.transform.localEulerAngles = new Vector3(0f, 332.6f, 0f);
+                m_mapTable.transform.localPosition = new Vector3(-1.14f, -0.05f, -0.73f);
+                m_mapTable.transform.localEulerAngles = new Vector3(0f, 342.6f, 0f);
 
                 MapTable mapTable = m_mapTable.GetComponent<MapTable>();
 
@@ -1344,8 +1348,28 @@ namespace LongshipUpgrades
                 mapTable.m_writeSwitch.m_onUse = (Switch.Callback)Delegate.Combine(mapTable.m_writeSwitch.m_onUse, new Switch.Callback(mapTable.OnWrite));
                 mapTable.m_writeSwitch.m_onHover = (Switch.TooltipCallback)Delegate.Combine(mapTable.m_writeSwitch.m_onHover, new Switch.TooltipCallback(mapTable.GetWriteHoverText));
 
-                // WIP
-                m_mapTable.SetActive(true);
+                if (mapTableEnabled.Value)
+                {
+                    Transform mapTableControllerCollider = AddCollider(interactableParent, "mapTable_controller", typeof(BoxCollider));
+                    mapTableControllerCollider.localPosition = m_mapTable.transform.localPosition;
+                    mapTableControllerCollider.localScale = new Vector3(0.27f, 0.04f, 0.27f);
+                    mapTableControllerCollider.localEulerAngles = m_mapTable.transform.localEulerAngles;
+
+                    m_mapTableUpgrade = mapTableControllerCollider.gameObject;
+                    m_mapTableUpgrade.layer = piece_nonsolid;
+                    m_mapTableUpgrade.SetActive(true);
+
+                    LongshipPartController mapTableController = mapTableControllerCollider.gameObject.AddComponent<LongshipPartController>();
+                    mapTableController.m_name = "$lu_part_maptable_name";
+                    mapTableController.m_nview = m_nview;
+                    mapTableController.AddUpgradeRequirement(s_mapTableUpgraded,
+                                                         "$lu_part_maptable_upgrade",
+                                                         ParseRequirements(mapTableUpgradeRecipe.Value),
+                                                         mapTableStation.Value,
+                                                         mapTableStationLvl.Value,
+                                                         mapTableStationRange.Value);
+                }
+
             }
         }
 
@@ -1453,6 +1477,10 @@ namespace LongshipUpgrades
             Vector3 position = base.transform.position + UnityEngine.Random.insideUnitSphere * 1f;
             return Instantiate(lootContainerPrefab, position, UnityEngine.Random.rotation).GetComponent<Container>().GetInventory();
         }
+
+        public bool IsTentActive() => m_tent != null && m_tent.activeInHierarchy;
+
+        public bool IsHeatActive() => m_fireWarmth != null && m_fireWarmth.m_isHeatType;
 
         private static bool IsNightTime()
         {
@@ -1646,10 +1674,6 @@ namespace LongshipUpgrades
 
         internal static bool TryGetShipComponent(Ship ship, out LongshipCustomizableParts parts) => s_allInstances.TryGetValue(ship.gameObject, out parts) || ship.TryGetComponent(out parts);
 
-        public bool IsTentActive() => m_tent != null && m_tent.activeInHierarchy;
-
-        public bool IsHeatActive() => m_fireWarmth != null && m_fireWarmth.m_isHeatType;
-
         public static Vector3 ParseVector3(string rString)
         {
             string[] array = rString.Substring(1, rString.Length - 2).Split(',');
@@ -1692,7 +1716,7 @@ namespace LongshipUpgrades
             Switch readSwitch = readMap.gameObject.AddComponent<Switch>();
             readSwitch.m_name = "$piece_cartographytable";
 
-            readMap.gameObject.layer = piece_nonsolid;
+            readMap.gameObject.layer = vehicle;
             readMap.gameObject.SetActive(true);
 
             Transform writeMap = AddCollider(s_mapTablePrefab.transform, "WriteMap", typeof(BoxCollider));
@@ -1702,7 +1726,7 @@ namespace LongshipUpgrades
             Switch writeSwitch = writeMap.gameObject.AddComponent<Switch>();
             writeSwitch.m_name = "$piece_cartographytable";
 
-            writeMap.gameObject.layer = piece_nonsolid;
+            writeMap.gameObject.layer = vehicle;
             writeMap.gameObject.SetActive(true);
 
             MapTable maptable = s_mapTablePrefab.AddComponent<MapTable>();

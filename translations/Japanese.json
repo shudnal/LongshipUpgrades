@@ -39,5 +39,7 @@
     "lu_box_name": "ボックス",
     "lu_box_climb": "登る",
     "lu_part_wisp_upgrade": "ウィスプトーチをマストの上部に取り付けます",
-    "lu_part_wisp_name":  "ウィスプ"
+    "lu_part_wisp_name":  "ウィスプ",
+    "lu_part_maptable_name": "地図製作テーブル",
+    "lu_part_maptable_upgrade": "このテーブルがあれば、第10世界における自分の足取りを記録し、共用することができる"
 }

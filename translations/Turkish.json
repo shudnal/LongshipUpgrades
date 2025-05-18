@@ -39,5 +39,7 @@
     "lu_box_name": "Kutu",
     "lu_box_climb": "Tırman",
     "lu_part_wisp_upgrade": "Peri meşalesi direğinin tepesine monte edin",
-    "lu_part_wisp_name":  "Peri"
+    "lu_part_wisp_name":  "Peri",
+    "lu_part_maptable_name": "Haritacılık masası",
+    "lu_part_maptable_upgrade": "Bu masa sayesinde, 10. Dünya'daki keşiflerini kaydedebilir ve paylaşabilirsin."
 }

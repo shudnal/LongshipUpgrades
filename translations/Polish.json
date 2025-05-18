@@ -39,5 +39,7 @@
     "lu_box_name": "Skrzynia",
     "lu_box_climb": "Wspinaj się",
     "lu_part_wisp_upgrade": "Umieść pochodnię z magicznym blaskiem na szczycie masztu",
-    "lu_part_wisp_name":  "Ognik"
+    "lu_part_wisp_name":  "Ognik",
+    "lu_part_maptable_name": "Stół kartograficzny",
+    "lu_part_maptable_upgrade": "Dzięki temu stołowi możesz zapisywać i udostępniać swoje eksploracje Dziesiątego świata."
 }
