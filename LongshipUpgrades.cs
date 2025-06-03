@@ -169,7 +169,7 @@ namespace LongshipUpgrades
             healthLvl1Station = config("Hull", "Upgrade - Lvl 1 - Station name", defaultValue: "$piece_forge", "Station name token. The center of the ship is the starting point of the check.");
             healthLvl1StationLvl = config("Hull", "Upgrade - Lvl 1 - Station level", defaultValue: 7, "Station level. At least one station in the range must meet the level requirement.");
             healthLvl1StationRange = config("Hull", "Upgrade - Lvl 1 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
-            healthUpgradeRecipe = config("Hull", "Upgrade - Lvl 1 - Recipe", defaultValue: "Finewood:20,BlackMetal:10,Raspberries:2,Blueberries:2,Coal:2", "Hull lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            healthUpgradeRecipe = config("Hull", "Upgrade - Lvl 1 - Recipe", defaultValue: "FineWood:20,BlackMetal:10,Raspberry:2,Blueberries:2,Coal:2", "Hull lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
             healthUpgradeLvl2 = config("Hull", "Upgrade - Lvl 2 - Health", defaultValue: 2000, "Health of ship hull after second upgrade. Set to 0 to disable upgrade.");
             ashlandsProtection = config("Hull", "Upgrade - Lvl 2 - Ashlands protection", defaultValue: true, "Should ship be protected from ashlands ocean after second upgrade. If disabled - second upgrade will not be available.");
             healthLvl2Station = config("Hull", "Upgrade - Lvl 2 - Station name", defaultValue: "$piece_blackforge", "Station name token. The center of the ship is the starting point of the check.");
