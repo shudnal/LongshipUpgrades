@@ -1,3 +1,7 @@
+# 1.0.12
+* Call To Arms patch
+* Map table
+
 # 1.0.11
 * fixed issue with texture loading on Awake
 

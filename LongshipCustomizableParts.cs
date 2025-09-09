@@ -1407,7 +1407,7 @@ namespace LongshipUpgrades
                 GameObject item = Instantiate(itemPrefab, m_trophyStand.m_dropSpawnPoint.position + vector, m_trophyStand.m_dropSpawnPoint.rotation * quaternion);
                 ItemDrop itemDrop = item.GetComponent<ItemDrop>();
                 itemDrop.LoadFromExternalZDO(m_trophyStand.m_nview.GetZDO());
-                item.GetComponent<Rigidbody>().velocity = Vector3.up * 4f;
+                item.GetComponent<Rigidbody>().linearVelocity = Vector3.up * 4f;
 
                 if (m_destroyedLootPrefab)
                 {

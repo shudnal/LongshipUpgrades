@@ -35,6 +35,7 @@ namespace LongshipUpgrades
 
         public GameObject m_visualItem;
 
+        [NonSerialized]
         public string m_currentItemName = "";
 
         public ItemDrop.ItemData m_queuedItem;
@@ -260,7 +261,7 @@ namespace LongshipUpgrades
 
                 GameObject obj = Instantiate(itemPrefab, m_dropSpawnPoint.position + vector, m_dropSpawnPoint.rotation * quaternion);
                 obj.GetComponent<ItemDrop>().LoadFromExternalZDO(m_nview.GetZDO());
-                obj.GetComponent<Rigidbody>().velocity = Vector3.up * 4f;
+                obj.GetComponent<Rigidbody>().linearVelocity = Vector3.up * 4f;
                 m_effects.Create(m_dropSpawnPoint.position, Quaternion.identity);
             }
 

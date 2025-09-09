@@ -203,7 +203,7 @@ namespace LongshipUpgrades
             tentStationRange = config("Tent", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
             
             wispEnabled = config("Wisp torch", "Enable upgrades", defaultValue: true, "Wisp torch pushes away the surrounding magic mist.");
-            wispUpgradeRecipe = config("Wisp torch", "Recipe", defaultValue: "YggdrasilWood:10,Wisp:5,Eitr:5", "Upgrade recipe. World restart or ship rebuild required to apply changes.");
+            wispUpgradeRecipe = config("Wisp torch", "Recipe", defaultValue: "YggdrasilWood:10,Wisp:5,Eitr:5", "Wisp Torch upgrade recipe. World restart or ship rebuild required to apply changes.");
             wispStation = config("Wisp torch", "Station name", defaultValue: "$piece_magetable", "Station name token. The center of the ship is the starting point of the check.");
             wispStationLvl = config("Wisp torch", "Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
             wispStationRange = config("Wisp torch", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
@@ -220,7 +220,7 @@ namespace LongshipUpgrades
             itemStandForsakenPower = config("Item stand", "Forsaken power enabled", defaultValue: true, "Boss trophies brings an option to cast another Forsaken power while on ship.");
 
             mapTableEnabled = config("Map table", "Enable upgrades", defaultValue: true, "Cartography table allows to exchange map data between players.");
-            mapTableUpgradeRecipe = config("Map table", "Recipe", defaultValue: "FineWood:10,Bronze:2,LeatherScraps:5,Raspberry:4", "Upgrade recipe. World restart or ship rebuild required to apply changes.");
+            mapTableUpgradeRecipe = config("Map table", "Recipe", defaultValue: "FineWood:10,Bronze:2,LeatherScraps:5,Raspberry:4", "Map Table upgrade recipe. World restart or ship rebuild required to apply changes.");
             mapTableStation = config("Map table", "Station name", defaultValue: "$piece_forge", "Station name token. The center of the ship is the starting point of the check.");
             mapTableStationLvl = config("Map table", "Station level", defaultValue: 3, "Station level. At least one station in the range must meet the level requirement.");
             mapTableStationRange = config("Map table", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
