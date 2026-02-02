@@ -5,7 +5,7 @@
     "lu_part_lantern_name": "Фонарь",
     "lu_part_lantern_enable": "Повесить",
     "lu_part_lantern_disable": "Снять",
-    "lu_part_lantern_upgrade": "Добавляет фонарь, освещающий палубу\nФонарь и тент обеспечивают теплое место для отдыха",
+    "lu_part_lantern_upgrade": "Добавляет фонарь, освещающий палубу\nФонарь и тент обеспечивают тёплое место для отдыха",
     "lu_part_tent_name": "Тент",
     "lu_part_tent_enable": "Разместить",
     "lu_part_tent_disable": "Убрать",
@@ -33,13 +33,13 @@
     "lu_part_turrets_name": "Баллисты",
     "lu_part_turrets_enable": "Активировать",
     "lu_part_turrets_disable": "Деактивировать",
-    "lu_part_turrets_upgrade": "Добавляет пару мини-турелей, которые стреляют болтами по врагам",
+    "lu_part_turrets_upgrade": "Добавляет пару мини-баллист, стреляющих болтами по врагам",
     "lu_controller_message_unknownupgrade": "Неизвестное улучшение",
     "lu_controller_message_unknownitem": "Неизвестный предмет",
     "lu_box_name": "Ящик",
     "lu_box_climb": "Залезть",
-    "lu_part_wisp_upgrade": "Установить на вершину мачты факел с магическим огоньком",
-    "lu_part_wisp_name":  "Светлячок",
+    "lu_part_wisp_upgrade": "Установить на вершину мачты факел с огоньком",
+    "lu_part_wisp_name": "Огонёк",
     "lu_part_maptable_name": "Небольшой стол картографа",
-    "lu_part_maptable_upgrade": "За этим столом можно записывать и делиться своими открытиями в 10-м мире."
+    "lu_part_maptable_upgrade": "За этим столом можно записывать и делиться своими открытиями в десятом мире."
 }

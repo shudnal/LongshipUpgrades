@@ -16,7 +16,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.12";
+        public const string pluginVersion = "1.0.13";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -135,7 +135,7 @@ namespace LongshipUpgrades
 
             LoadTextures();
 
-            LocalizationManager.Localizer.Load();
+            StartCoroutine(LocalizationManager.Localizer.Load());
         }
 
         public void ConfigInit()

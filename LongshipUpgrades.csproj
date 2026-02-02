@@ -32,9 +32,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <LangVersion>8.0</LangVersion>
+    <LangVersion>10.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="LocalizationManager.cs" />
     <Compile Include="LongshipCustomizableParts.cs" />
     <Compile Include="LongshipPartController.cs" />
     <Compile Include="LongshipPropertyBlocks.cs" />
@@ -59,10 +60,6 @@
     <Reference Include="BepInEx">
       <HintPath>F:\Steam\steamapps\common\Valheim\BepInEx\core\BepInEx.dll</HintPath>
     </Reference>
-    <Reference Include="LocalizationManager, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>Libs\LocalizationManager.dll</HintPath>
-    </Reference>
     <Reference Include="netstandard, Version=2.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\stable\netstandard.dll</HintPath>
@@ -74,6 +71,10 @@
     <Reference Include="SoftReferenceableAssets, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\stable\SoftReferenceableAssets.dll</HintPath>
+    </Reference>
+    <Reference Include="Splatform, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\stable\Splatform.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\Assemblies\stable\UnityEngine.dll</HintPath>
@@ -111,7 +112,6 @@
     <EmbeddedResource Include="Assets\tent_03.png" />
     <EmbeddedResource Include="Assets\tent_04.png" />
     <EmbeddedResource Include="Assets\tent_05.png" />
-    <Content Include="Libs\LocalizationManager.dll" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ILRepack.Lib.MSBuild.Task">
@@ -122,8 +122,12 @@
     <PackageReference Include="System.Memory">
       <Version>4.6.3</Version>
     </PackageReference>
+    <PackageReference Include="YamlDotNet">
+      <Version>16.3.0</Version>
+    </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="EmbeddedLocalizations.csv" />
     <None Include="ILRepack.targets" />
     <EmbeddedResource Include="translations\English.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -152,6 +156,25 @@
     <EmbeddedResource Include="translations\Polish.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
+    <EmbeddedResource Include="translations\Chinese_Trad.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="translations\Czech.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="translations\Dutch.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="translations\French.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="translations\Korean.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="translations\Ukrainian.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <None Include="UpdateTranslations.ps1" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

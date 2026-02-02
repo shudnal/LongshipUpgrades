@@ -1,3 +1,8 @@
+# 1.0.13
+* patch 0.221.10
+* translations refined
+* more translations: Chinese Traditional, Czech, Dutch, French, Korean, Ukranian
+
 # 1.0.12
 * Call To Arms patch
 * Map table
