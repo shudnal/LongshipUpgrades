@@ -141,6 +141,8 @@ namespace LongshipUpgrades
 
         private static readonly Dictionary<GameObject, LongshipCustomizableParts> s_allInstances = new Dictionary<GameObject, LongshipCustomizableParts>();
 
+        private static readonly List<HitData.DamageModPair> s_fireResistantModifiers = new() { new HitData.DamageModPair() { m_type = HitData.DamageType.Fire, m_modifier = HitData.DamageModifier.VeryResistant } };
+
         private void Awake()
         {
             if (prefabInit)
@@ -300,28 +302,39 @@ namespace LongshipUpgrades
                 }
             }
 
-            if (healthEnabled.Value && m_wnt && m_ashlandsUpgraded != m_zdo.GetBool(s_ashlandsUpgraded))
+            if (healthEnabled.Value && m_wnt)
             {
-                m_ashlandsUpgraded = m_zdo.GetBool(s_ashlandsUpgraded);
-
-                if (m_ashlandsUpgraded && healthUpgradeLvl2.Value > 0)
+                if (m_ashlandsUpgraded != (m_ashlandsUpgraded = m_zdo.GetBool(s_ashlandsUpgraded)))
                 {
-                    if (m_wnt.m_health < healthUpgradeLvl2.Value)
+                    if (m_ashlandsUpgraded && healthUpgradeLvl2.Value > 0)
                     {
-                        m_wnt.m_health = healthUpgradeLvl2.Value;
-                        updateHealth = true;
+                        if (m_wnt.m_health < healthUpgradeLvl2.Value)
+                        {
+                            m_wnt.m_health = healthUpgradeLvl2.Value;
+                            updateHealth = true;
+                        }
                     }
 
-                    if (ashlandsProtection.Value)
-                    {
-                        m_ship.m_ashlandsReady = true;
-
-                        m_wnt.m_ashDamageResist = true;
-                        m_wnt.m_damages.Apply(new List<HitData.DamageModPair> { new HitData.DamageModPair() { m_type = HitData.DamageType.Fire, m_modifier = HitData.DamageModifier.VeryResistant } });
-                    }
+                    UpdateHullPropertyBlocks();
                 }
 
-                UpdateHullPropertyBlocks();
+                if (m_ashlandsUpgraded && ashlandsProtection.Value)
+                {
+                    m_ship.m_ashlandsReady = true;
+                    m_ship.m_ashlandsDmgTimer = 0f;
+                    if (m_ship.m_ashdamageEffects.activeSelf)
+                    {
+                        m_ship.m_ashdamageEffects.SetActive(false);
+                        m_ship.m_ashlandsFxAudio.Do(item => item.Stop());
+                    }
+
+                    if (!m_wnt.m_ashDamageResist)
+                    {
+                        m_wnt.m_ashDamageResist = true;
+                        m_wnt.m_burnable = false;
+                        m_wnt.m_damages.Apply(s_fireResistantModifiers);
+                    }
+                }
             }
 
             if (updateHealth && m_nview.IsValid() && m_nview.IsOwner())
@@ -1298,6 +1311,9 @@ namespace LongshipUpgrades
                 forceField.GetComponent<ParticleSystemForceField>().endRange = 13;
 
                 forceField.localPosition = new Vector3(-2f, -10f, 0f);
+
+                ParticleSystem.MainModule sparcs = m_wisp.transform.Find("sparcs_front").GetComponent<ParticleSystem>().main;
+                sparcs.simulationSpace = ParticleSystemSimulationSpace.World;
 
                 if (wispEnabled.Value)
                 {

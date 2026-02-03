@@ -79,6 +79,10 @@
     <Reference Include="UnityEngine">
       <HintPath>..\Assemblies\stable\UnityEngine.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.AudioModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\stable\UnityEngine.AudioModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\Assemblies\stable\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
