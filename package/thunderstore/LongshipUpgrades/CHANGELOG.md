@@ -1,3 +1,9 @@
+# 1.0.14
+* more translations
+* wisp sparcs now will be affected by ship movement
+* ship should stay ashlands protected when handled by vanilla clients (just in case)
+* fixed rare issue when ship could stay in constantly damaged state when ship parked in Ashlands
+
 # 1.0.13
 * patch 0.221.10
 * translations refined
