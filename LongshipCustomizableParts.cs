@@ -315,6 +315,16 @@ namespace LongshipUpgrades
                         }
                     }
 
+                    string typeName = m_ship.GetType().Name;
+                    m_zdo.Set(ZNetView.CustomFieldsStr, true);
+                    m_zdo.Set((ZNetView.CustomFieldsStr + typeName).GetStableHashCode(), true);
+                    m_zdo.Set(typeName + "." + "m_ashlandsReady", true);
+
+                    typeName = m_wnt.GetType().Name;
+                    m_zdo.Set((ZNetView.CustomFieldsStr + typeName).GetStableHashCode(), true);
+                    m_zdo.Set(typeName + "." + "m_ashDamageResist", true);
+                    m_zdo.Set(typeName + "." + "m_burnable", false);
+
                     UpdateHullPropertyBlocks();
                 }
 
