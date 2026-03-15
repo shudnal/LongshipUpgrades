@@ -269,10 +269,23 @@ namespace LongshipUpgrades
                 m_containerPartsLvl2?.Do(part => part?.SetActive(m_containerUpgradedLvl2));
                 
                 if (m_containerUpgradedLvl2 && m_container.m_height < containerHeight.Value)
+                {
+                    string typeName = m_container.GetType().Name;
+                    m_zdo.Set(ZNetView.CustomFieldsStr, true);
+                    m_zdo.Set((ZNetView.CustomFieldsStr + typeName).GetStableHashCode(), true);
+                    m_zdo.Set(typeName + "." + "m_height", containerHeight.Value);
                     m_container.m_height = containerHeight.Value;
+                }
 
                 if (m_containerUpgradedLvl2 && m_container.GetInventory().GetHeight() < containerHeight.Value)
+                {
+                    string typeName = m_container.GetInventory().GetType().Name;
+                    m_zdo.Set(ZNetView.CustomFieldsStr, true);
+                    m_zdo.Set((ZNetView.CustomFieldsStr + typeName).GetStableHashCode(), true);
+                    m_zdo.Set(typeName + "." + "m_height", containerHeight.Value);
+
                     m_container.GetInventory().m_height = containerHeight.Value;
+                }
             }
 
             if (containerEnabled.Value && m_storageUpgrade && m_containerUpgradedLvl1 != m_zdo.GetBool(s_containerUpgradedLvl1))
@@ -281,10 +294,24 @@ namespace LongshipUpgrades
                 m_containerPartsLvl1?.Do(part => part?.SetActive(m_containerUpgradedLvl1));
 
                 if (m_containerUpgradedLvl1 && m_container.m_width < containerWidth.Value)
+                {
                     m_container.m_width = containerWidth.Value;
+                    
+                    string typeName = m_container.GetType().Name;
+                    m_zdo.Set(ZNetView.CustomFieldsStr, true);
+                    m_zdo.Set((ZNetView.CustomFieldsStr + typeName).GetStableHashCode(), true);
+                    m_zdo.Set(typeName + "." + "m_width", containerWidth.Value);
+                }
 
                 if (m_containerUpgradedLvl1 && m_container.GetInventory().GetWidth() < containerWidth.Value)
+                {
                     m_container.GetInventory().m_width = containerWidth.Value;
+                   
+                    string typeName = m_container.GetInventory().GetType().Name;
+                    m_zdo.Set(ZNetView.CustomFieldsStr, true);
+                    m_zdo.Set((ZNetView.CustomFieldsStr + typeName).GetStableHashCode(), true);
+                    m_zdo.Set(typeName + "." + "m_width", containerWidth.Value);
+                }
             }
 
             m_storageUpgrade?.SetActive(containerEnabled.Value && !m_containerUpgradedLvl2);

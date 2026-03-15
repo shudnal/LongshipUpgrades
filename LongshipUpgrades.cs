@@ -510,10 +510,24 @@ namespace LongshipUpgrades
                     return;
 
                 if (m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_containerUpgradedLvl1) && __instance.m_width < containerWidth.Value)
+                {
                     __instance.m_width = containerWidth.Value;
 
+                    string typeName = __instance.GetType().Name;
+                    m_nview.GetZDO().Set(ZNetView.CustomFieldsStr, true);
+                    m_nview.GetZDO().Set((ZNetView.CustomFieldsStr + typeName).GetStableHashCode(), true);
+                    m_nview.GetZDO().Set(typeName + "." + "m_width", containerWidth.Value);
+                }
+
                 if (m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_containerUpgradedLvl2) && __instance.m_height < containerHeight.Value)
+                {
                     __instance.m_height = containerHeight.Value;
+
+                    string typeName = __instance.GetType().Name;
+                    m_nview.GetZDO().Set(ZNetView.CustomFieldsStr, true);
+                    m_nview.GetZDO().Set((ZNetView.CustomFieldsStr + typeName).GetStableHashCode(), true);
+                    m_nview.GetZDO().Set(typeName + "." + "m_height", containerHeight.Value);
+                }
             }
         }
 
