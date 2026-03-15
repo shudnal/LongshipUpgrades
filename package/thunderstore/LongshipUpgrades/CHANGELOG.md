@@ -1,3 +1,7 @@
+# 1.0.15
+* container upgrade will stay even if mod was disabled
+* optimized stored map table data size to potentially fix occasional ship desync
+
 # 1.0.14
 * more translations
 * wisp sparcs now will be affected by ship movement

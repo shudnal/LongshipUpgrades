@@ -100,6 +100,7 @@ namespace LongshipUpgrades
         public static readonly int s_wispUpgraded = "WispUpgraded".GetStableHashCode();
         public static readonly int s_wispRemoved = "WispRemoved".GetStableHashCode();
         public static readonly int s_mapTableUpgraded = "MapTableUpgraded".GetStableHashCode();
+        public static readonly int s_mapDataCompressed = "MapDataCompressed".GetStableHashCode();
 
         public static readonly int s_containerUpgradedLvl1 = "ContainerUpgradedLvl1".GetStableHashCode();
         public static readonly int s_containerUpgradedLvl2 = "ContainerUpgradedLvl2".GetStableHashCode();

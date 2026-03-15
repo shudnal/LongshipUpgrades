@@ -3,7 +3,7 @@
 
 Ever wanted your most used through the game ship to be even more useful? And not just useful but also cozy and deadly.
 
-This mod is fully compatible with vanilla Longship. You won't lose it after disabling the mod. Except maybe extra storage but anyway destroying ship will create a crates with that extra stored items.
+This mod is fully compatible with vanilla Longship. You won't lose it after disabling the mod. Even extra storage update will stay.
 
 Every mentioned upgrade is highly customizable.
 

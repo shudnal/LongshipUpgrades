@@ -3,6 +3,7 @@ using BepInEx.Configuration;
 using HarmonyLib;
 using ServerSync;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,7 +17,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.14";
+        public const string pluginVersion = "1.0.15";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -512,7 +513,7 @@ namespace LongshipUpgrades
                 if (m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_containerUpgradedLvl1) && __instance.m_width < containerWidth.Value)
                 {
                     __instance.m_width = containerWidth.Value;
-
+                    
                     string typeName = __instance.GetType().Name;
                     m_nview.GetZDO().Set(ZNetView.CustomFieldsStr, true);
                     m_nview.GetZDO().Set((ZNetView.CustomFieldsStr + typeName).GetStableHashCode(), true);
@@ -567,14 +568,164 @@ namespace LongshipUpgrades
             }
         }
 
+        private static readonly Stack<bool> s_mapTableDataCompressionFlags = new Stack<bool>();
+        private static int s_mapTableWriteDepth = 0;
+
+        private static bool IsShipMapTable(MapTable mapTable)
+        {
+            return mapTable.name == LongshipCustomizableParts.mapTablePrefabName && IsControlledComponent(mapTable);
+        }
+
+        private static bool IsCompressedMapDataContext()
+        {
+            return s_mapTableDataCompressionFlags.Count > 0 && s_mapTableDataCompressionFlags.Peek();
+        }
+
+        [HarmonyPatch(typeof(MapTable), nameof(MapTable.OnRead), new Type[] { typeof(Switch), typeof(Humanoid), typeof(ItemDrop.ItemData) })]
+        public static class MapTable_OnRead_TrackCompressionContext
+        {
+            public static void Prefix(MapTable __instance, ref bool __state)
+            {
+                __state = IsShipMapTable(__instance);
+                if (!__state)
+                    return;
+
+                s_mapTableDataCompressionFlags.Push(__instance.m_nview && __instance.m_nview.IsValid() && __instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_mapDataCompressed));
+            }
+
+            public static void Postfix(bool __state)
+            {
+                if (__state && s_mapTableDataCompressionFlags.Count > 0)
+                    s_mapTableDataCompressionFlags.Pop();
+            }
+        }
+
         [HarmonyPatch(typeof(MapTable), nameof(MapTable.OnWrite))]
         public static class MapTable_OnWrite_ScaleWriteEffects
         {
             public static bool inCall = false;
 
-            public static void Prefix(MapTable __instance) => inCall = __instance.name == LongshipCustomizableParts.mapTablePrefabName && IsControlledComponent(__instance);
+            public static void Prefix(MapTable __instance, ref bool __state)
+            {
+                inCall = IsShipMapTable(__instance);
+                __state = inCall;
 
-            public static void Postfix() => inCall = false;
+                if (!__state)
+                    return;
+
+                s_mapTableWriteDepth++;
+                s_mapTableDataCompressionFlags.Push(__instance.m_nview && __instance.m_nview.IsValid() && __instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_mapDataCompressed));
+            }
+
+            public static void Postfix(bool __state)
+            {
+                inCall = false;
+
+                if (!__state)
+                    return;
+
+                if (s_mapTableDataCompressionFlags.Count > 0)
+                    s_mapTableDataCompressionFlags.Pop();
+
+                s_mapTableWriteDepth = Math.Max(0, s_mapTableWriteDepth - 1);
+            }
+        }
+
+        [HarmonyPatch(typeof(MapTable), nameof(MapTable.RPC_MapData))]
+        public static class MapTable_RPC_MapData_MarkCompressed
+        {
+            public static void Postfix(MapTable __instance)
+            {
+                if (!IsShipMapTable(__instance) || !__instance.m_nview.IsValid() || !__instance.m_nview.IsOwner())
+                    return;
+
+                __instance.m_nview.GetZDO().Set(LongshipCustomizableParts.s_mapDataCompressed, true);
+            }
+        }
+
+        [HarmonyPatch(typeof(Minimap), nameof(Minimap.ReadExploredArray))]
+        public static class Minimap_ReadExploredArray_CompressedShipMapData
+        {
+            public static bool Prefix(Minimap __instance, ZPackage pkg, int version, ref List<bool> __result)
+            {
+                if (!IsCompressedMapDataContext())
+                    return true;
+
+                int exploredLength = pkg.ReadInt();
+                if (exploredLength != __instance.m_explored.Length)
+                {
+                    ZLog.LogWarning("Map exploration array size missmatch:" + exploredLength + " VS " + __instance.m_explored.Length);
+                    __result = null;
+                    return false;
+                }
+
+                byte[] packedExplored = pkg.ReadByteArray();
+                BitArray bits = new BitArray(packedExplored);
+                List<bool> explored = new List<bool>(exploredLength);
+                for (int i = 0; i < exploredLength; i++)
+                    explored.Add(i < bits.Count && bits[i]);
+
+                LogInfo($"Ship map data read: explored payload unpacked {packedExplored.Length} -> {exploredLength} bytes ({Math.Max(0, exploredLength - packedExplored.Length)} bytes added)");
+
+                __result = explored;
+                return false;
+            }
+        }
+
+        [HarmonyPatch(typeof(Minimap), nameof(Minimap.GetSharedMapData))]
+        public static class Minimap_GetSharedMapData_CompressShipMapData
+        {
+            public static void Postfix(ref byte[] __result)
+            {
+                if (s_mapTableWriteDepth == 0)
+                    return;
+
+                ZPackage source = new ZPackage(__result);
+                int version = source.ReadInt();
+                int exploredLength = source.ReadInt();
+
+                bool[] explored = new bool[exploredLength];
+                for (int i = 0; i < exploredLength; i++)
+                    explored[i] = source.ReadBool();
+
+                BitArray bits = new BitArray(explored);
+                byte[] packedExplored = new byte[(bits.Length - 1) / 8 + 1];
+                bits.CopyTo(packedExplored, 0);
+
+                LogInfo($"Ship map data write: explored payload compressed {exploredLength} -> {packedExplored.Length} bytes ({Math.Max(0, exploredLength - packedExplored.Length)} bytes saved)");
+
+                ZPackage result = new ZPackage();
+                result.Write(version);
+                result.Write(exploredLength);
+                result.Write(packedExplored);
+
+                if (version >= 2)
+                {
+                    int pinCount = source.ReadInt();
+                    result.Write(pinCount);
+
+                    for (int i = 0; i < pinCount; i++)
+                    {
+                        long ownerId = source.ReadLong();
+                        string pinName = source.ReadString();
+                        Vector3 pinPos = source.ReadVector3();
+                        int pinType = source.ReadInt();
+                        bool pinChecked = source.ReadBool();
+                        string author = version >= 3 ? source.ReadString() : string.Empty;
+
+                        result.Write(ownerId);
+                        result.Write(pinName);
+                        result.Write(pinPos);
+                        result.Write(pinType);
+                        result.Write(pinChecked);
+
+                        if (version >= 3)
+                            result.Write(author);
+                    }
+                }
+
+                __result = result.GetArray();
+            }
         }
 
         [HarmonyPatch(typeof(EffectList), nameof(EffectList.Create))]
