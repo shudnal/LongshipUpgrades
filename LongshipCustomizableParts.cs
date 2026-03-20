@@ -74,6 +74,7 @@ namespace LongshipUpgrades
         public const string wisptorchName = "piece_groundtorch_mist";
         public const string mapTablePrefabName = "maptable";
         private static bool prefabInitialized = false;
+        public static int prefabInt = prefabName.GetStableHashCode();
 
         private static Shader shaderStandard;
         private static Material standSharedMaterial;
@@ -143,6 +144,10 @@ namespace LongshipUpgrades
         private static readonly Dictionary<GameObject, LongshipCustomizableParts> s_allInstances = new Dictionary<GameObject, LongshipCustomizableParts>();
 
         private static readonly List<HitData.DamageModPair> s_fireResistantModifiers = new() { new HitData.DamageModPair() { m_type = HitData.DamageType.Fire, m_modifier = HitData.DamageModifier.VeryResistant } };
+        private static readonly int s_shipMapDataRevision = "ShipMapDataRevision".GetStableHashCode();
+
+        private float m_nextShipMapDataRequestTime;
+        private int m_lastRequestedShipMapRevision;
 
         private void Awake()
         {
@@ -162,6 +167,8 @@ namespace LongshipUpgrades
                 m_nview.Register<int, bool, int, string>("SetActive", RPC_SetActive);
                 m_nview.Register<int, string, string>("SetBuilt", RPC_SetBuilt);
             }
+
+            m_lastRequestedShipMapRevision = 0;
 
             m_container = GetComponentsInChildren<Container>().Where(container => container.gameObject.name == "piece_chest").FirstOrDefault();
             m_destroyedLootPrefab = m_container?.m_destroyedLootPrefab;
@@ -206,6 +213,8 @@ namespace LongshipUpgrades
 
             if (m_zdo == null || !m_ship)
                 return;
+
+            RequestMissingShipMapData();
 
             m_customMast = mastEnabled.Value && m_zdo.GetBool(s_mastUpgraded);
             m_mastUpgrade?.SetActive((mastEnabled.Value && !m_customMast) || mastRemovable.Value);
@@ -452,6 +461,31 @@ namespace LongshipUpgrades
                 if (!string.IsNullOrWhiteSpace(stationName))
                     buildEffects[stationName]?.Create(ParseVector3(position), Quaternion.identity);
             }
+        }
+
+        private void RequestMissingShipMapData()
+        {
+            if (!m_zdo.GetBool(s_mapTableUpgraded) || !m_zdo.GetBool(s_mapDataCompressed))
+                return;
+
+            int currentRevision = m_zdo.GetInt(s_shipMapDataRevision);
+            if (currentRevision <= 0)
+                return;
+
+            bool hasLocalData = TryGetShipMapData(m_zdo.m_uid, out var entry) && entry.Data != null;
+            bool outdated = !hasLocalData || entry.Revision < currentRevision;
+            if (!outdated)
+            {
+                m_lastRequestedShipMapRevision = 0;
+                return;
+            }
+
+            if (Time.time < m_nextShipMapDataRequestTime && m_lastRequestedShipMapRevision == currentRevision)
+                return;
+
+            m_lastRequestedShipMapRevision = currentRevision;
+            m_nextShipMapDataRequestTime = Time.time + 2f;
+            RequestShipMapDataFromServer(m_zdo, currentRevision);
         }
 
         private void UpdateSailPropertyBlocks()

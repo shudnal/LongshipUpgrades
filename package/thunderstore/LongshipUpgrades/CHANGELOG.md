@@ -1,3 +1,6 @@
+# 1.0.16
+* rehauled map data storage and sync between clients to prevent increased network traffic caused by ships with map table
+
 # 1.0.15
 * container upgrade will stay even if mod was disabled
 * optimized stored map table data size to potentially fix occasional ship desync

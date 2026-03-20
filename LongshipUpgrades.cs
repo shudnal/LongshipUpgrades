@@ -17,7 +17,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.15";
+        public const string pluginVersion = "1.0.16";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -399,6 +399,7 @@ namespace LongshipUpgrades
             [HarmonyPriority(Priority.Last)]
             private static void Postfix()
             {
+                RegisterShipMapRpcs();
                 LongshipCustomizableParts.OnGlobalStart();
             }
         }
@@ -409,6 +410,7 @@ namespace LongshipUpgrades
             [HarmonyPriority(Priority.Last)]
             private static void Postfix()
             {
+                ClearShipMapRuntime();
                 LongshipCustomizableParts.OnGlobalDestroy();
             }
         }
@@ -422,7 +424,7 @@ namespace LongshipUpgrades
 
             [HarmonyPostfix]
             [HarmonyPatch(nameof(Ship.OnEnable))]
-            public static void OnEnablePostfix(Ship __instance) =>triggerCounter.Add(__instance, new Dictionary<Collider, int>());
+            public static void OnEnablePostfix(Ship __instance) => triggerCounter.Add(__instance, new Dictionary<Collider, int>());
 
             [HarmonyPostfix]
             [HarmonyPatch(nameof(Ship.OnDisable))]
@@ -475,6 +477,391 @@ namespace LongshipUpgrades
         private static bool IsControlledComponent(Component component)
         {
             return Utils.GetPrefabName(component.transform.root.gameObject) == LongshipCustomizableParts.prefabName;
+        }
+
+        public class ShipMapDataEntry
+        {
+            public int Revision;
+            public byte[] Data;
+            public int Hash;
+            public float LastAccessTime;
+        }
+
+        private const string shipMapRequestRpc = "LU_RequestShipMapData";
+        private const string shipMapResponseRpc = "LU_ShipMapDataResponse";
+        private const string shipMapSubmitRpc = "LU_SubmitShipMapData";
+        private static readonly Dictionary<ZDOID, ShipMapDataEntry> s_shipMapStore = new Dictionary<ZDOID, ShipMapDataEntry>();
+        private static readonly HashSet<ZDOID> s_trackedShipZdos = new HashSet<ZDOID>();
+        private static readonly List<ZDOID> s_saveInjectedShipMapZdos = new List<ZDOID>();
+        private static bool s_shipMapRpcsRegistered = false;
+        private static float s_nextClientShipMapPruneTime = 0f;
+
+        private static int GetShipMapHash(byte[] data)
+        {
+            if (data == null)
+                return 0;
+
+            unchecked
+            {
+                int hash = 17;
+                for (int i = 0; i < data.Length; i++)
+                    hash = hash * 31 + data[i];
+                return hash;
+            }
+        }
+
+        private static bool IsShipZdo(ZDO zdo) => zdo != null && zdo.GetPrefab() == LongshipCustomizableParts.prefabInt;
+
+        private static bool IsShipZdo(ZDOID id) => ZDOMan.instance != null && IsShipZdo(ZDOMan.instance.GetZDO(id));
+
+        public static bool IsValidMapTable(MapTable mapTable) => mapTable.m_nview && mapTable.m_nview.IsValid();
+
+        internal static void RegisterShipMapRpcs()
+        {
+            if (s_shipMapRpcsRegistered || ZRoutedRpc.instance == null)
+                return;
+
+            ZRoutedRpc.instance.Register<ZPackage>(shipMapRequestRpc, RPC_RequestShipMapData);
+            ZRoutedRpc.instance.Register<ZPackage>(shipMapResponseRpc, RPC_ShipMapDataResponse);
+            ZRoutedRpc.instance.Register<ZPackage>(shipMapSubmitRpc, RPC_SubmitShipMapData);
+            s_shipMapRpcsRegistered = true;
+        }
+
+        internal static bool TryGetShipMapData(ZDOID id, out ShipMapDataEntry entry)
+        {
+            if (s_shipMapStore.TryGetValue(id, out entry) && entry != null && entry.Data != null)
+            {
+                entry.LastAccessTime = Time.time;
+                return true;
+            }
+
+            entry = null;
+            return false;
+        }
+
+        internal static int GetShipMapRevision(ZDOID id)
+        {
+            return s_shipMapStore.TryGetValue(id, out ShipMapDataEntry entry) ? entry.Revision : 0;
+        }
+
+        internal static int SyncShipMapRevision(ZDO zdo, int? preferredRevision = null)
+        {
+            if (!IsShipZdo(zdo))
+                return 0;
+
+            int revision = preferredRevision ?? Math.Max(zdo.GetInt(s_shipMapDataRevision), GetShipMapRevision(zdo.m_uid));
+            if (revision <= 0)
+                revision = 1;
+
+            if (zdo.GetInt(s_shipMapDataRevision) != revision)
+                zdo.Set(s_shipMapDataRevision, revision);
+
+            if (s_shipMapStore.TryGetValue(zdo.m_uid, out ShipMapDataEntry entry))
+                entry.Revision = Math.Max(entry.Revision, revision);
+
+            return revision;
+        }
+
+        private static bool RemoveShipMapDataFromRuntime(ZDOID id)
+        {
+            if (!ZDOExtraData.s_byteArrays.TryGetValue(id, out BinarySearchDictionary<int, byte[]> byteArrays))
+                return false;
+
+            bool removed = byteArrays.Remove(ZDOVars.s_data);
+            if (removed && byteArrays.Count == 0)
+                ZDOExtraData.s_byteArrays.Remove(id);
+
+            return removed;
+        }
+
+        internal static bool InjectShipMapDataIntoZdo(ZDO zdo)
+        {
+            if (!IsShipZdo(zdo) || !TryGetShipMapData(zdo.m_uid, out ShipMapDataEntry entry))
+                return false;
+
+            ZDOExtraData.Set(zdo.m_uid, ZDOVars.s_data, entry.Data);
+            return true;
+        }
+
+        internal static bool ExtractShipMapDataFromZdo(ZDO zdo, bool removeFromRuntime = true)
+        {
+            if (!IsShipZdo(zdo))
+                return false;
+
+            byte[] data = zdo.GetByteArray(ZDOVars.s_data);
+            if (data == null)
+                return false;
+
+            int revision = SyncShipMapRevision(zdo);
+            SetShipMapData(zdo.m_uid, revision, data);
+
+            if (removeFromRuntime)
+                RemoveShipMapDataFromRuntime(zdo.m_uid);
+
+            return true;
+        }
+
+        internal static bool SetShipMapData(ZDOID id, int revision, byte[] data)
+        {
+            if (data == null || revision <= 0)
+                return false;
+
+            byte[] copy = (byte[])data.Clone();
+            int hash = GetShipMapHash(copy);
+            if (s_shipMapStore.TryGetValue(id, out ShipMapDataEntry existing))
+            {
+                if (revision < existing.Revision)
+                    return false;
+
+                if (revision == existing.Revision && existing.Hash == hash && StructuralComparisons.StructuralEqualityComparer.Equals(existing.Data, copy))
+                {
+                    existing.LastAccessTime = Time.time;
+                    return false;
+                }
+
+                existing.Revision = revision;
+                existing.Data = copy;
+                existing.Hash = hash;
+                existing.LastAccessTime = Time.time;
+                return true;
+            }
+
+            s_shipMapStore[id] = new ShipMapDataEntry()
+            {
+                Revision = revision,
+                Data = copy,
+                Hash = hash,
+                LastAccessTime = Time.time
+            };
+            return true;
+        }
+
+        internal static void RemoveShipMapData(ZDOID id)
+        {
+            s_trackedShipZdos.Remove(id);
+            s_shipMapStore.Remove(id);
+            RemoveShipMapDataFromRuntime(id);
+        }
+
+        internal static void ClearShipMapRuntime()
+        {
+            s_shipMapStore.Clear();
+            s_trackedShipZdos.Clear();
+            s_saveInjectedShipMapZdos.Clear();
+            s_shipMapRpcsRegistered = false;
+            s_nextClientShipMapPruneTime = 0f;
+
+        }
+
+        internal static void TrackShipZdo(ZDO zdo, bool extractFromRuntime = true)
+        {
+            if (!IsShipZdo(zdo))
+                return;
+
+            s_trackedShipZdos.Add(zdo.m_uid);
+
+            if (extractFromRuntime)
+                ExtractShipMapDataFromZdo(zdo, removeFromRuntime: true);
+        }
+
+        internal static void RebuildTrackedShipZdos(IEnumerable<ZDO> zdos)
+        {
+            s_trackedShipZdos.Clear();
+            foreach (ZDO zdo in zdos)
+                TrackShipZdo(zdo, extractFromRuntime: true);
+        }
+
+        internal static bool RequestShipMapDataFromServer(ZDO zdo, int currentRevision)
+        {
+            if (zdo == null || !zdo.IsValid() || currentRevision <= 0 || ZRoutedRpc.instance == null)
+                return false;
+
+            ZPackage pkg = new ZPackage();
+            pkg.Write(zdo.m_uid);
+            pkg.Write(currentRevision);
+            ZRoutedRpc.instance.InvokeRoutedRPC(shipMapRequestRpc, pkg);
+            LogInfo($"Ship map data requested for {zdo}");
+            return true;
+        }
+
+        private static void SubmitShipMapDataToServer(ZDO zdo, int revision, byte[] data)
+        {
+            if (zdo == null || revision <= 0 || data == null || ZRoutedRpc.instance == null || (ZNet.instance != null && ZNet.instance.IsServer()))
+                return;
+
+            ZPackage pkg = new ZPackage();
+            pkg.Write(zdo.m_uid);
+            pkg.Write(revision);
+            pkg.Write(data);
+            ZRoutedRpc.instance.InvokeRoutedRPC(shipMapSubmitRpc, pkg);
+            LogInfo($"Ship map data submitted to server for {zdo}");
+        }
+
+        private static void InjectAllTrackedShipMapDataIntoRuntime()
+        {
+            s_saveInjectedShipMapZdos.Clear();
+            foreach (ZDOID id in s_shipMapStore.Keys.ToList())
+            {
+                ZDO zdo = ZDOMan.instance?.GetZDO(id);
+                if (zdo != null && InjectShipMapDataIntoZdo(zdo))
+                    s_saveInjectedShipMapZdos.Add(id);
+            }
+        }
+
+        private static void RemoveInjectedShipMapDataFromRuntime()
+        {
+            foreach (ZDOID id in s_saveInjectedShipMapZdos)
+                RemoveShipMapDataFromRuntime(id);
+            s_saveInjectedShipMapZdos.Clear();
+        }
+
+        private static void PruneClientShipMapStore()
+        {
+            if (ZNet.instance == null || ZNet.instance.IsServer() || ZDOMan.instance == null)
+                return;
+
+            if (Time.time < s_nextClientShipMapPruneTime)
+                return;
+
+            s_nextClientShipMapPruneTime = Time.time + 10f;
+            foreach (ZDOID id in s_shipMapStore.Keys.ToList())
+            {
+                if (ZDOMan.instance.GetZDO(id) == null)
+                    RemoveShipMapData(id);
+            }
+        }
+
+        private static void RPC_RequestShipMapData(long sender, ZPackage pkg)
+        {
+            if (ZNet.instance == null || !ZNet.instance.IsServer() || pkg == null)
+                return;
+
+            ZDOID id = pkg.ReadZDOID();
+            int requestedRevision = pkg.ReadInt();
+            if (!TryGetShipMapData(id, out ShipMapDataEntry entry) || entry.Revision < requestedRevision)
+                return;
+
+            ZPackage response = new ZPackage();
+            response.Write(id);
+            response.Write(entry.Revision);
+            response.Write(entry.Data);
+            ZRoutedRpc.instance.InvokeRoutedRPC(sender, shipMapResponseRpc, response);
+            LogInfo($"Ship map data for {id} sent to {sender}");
+        }
+
+        private static void RPC_ShipMapDataResponse(long sender, ZPackage pkg)
+        {
+            if (ZNet.instance == null || ZNet.instance.IsServer() || pkg == null)
+                return;
+
+            ZDOID id = pkg.ReadZDOID();
+            int revision = pkg.ReadInt();
+            byte[] data = pkg.ReadByteArray();
+            if (data == null)
+                return;
+
+            if (revision <= GetShipMapRevision(id))
+                return;
+
+            SetShipMapData(id, revision, data);
+            LogInfo($"Ship map data response for {id} from {sender}");
+        }
+
+        private static void RPC_SubmitShipMapData(long sender, ZPackage pkg)
+        {
+            if (ZNet.instance == null || !ZNet.instance.IsServer() || pkg == null)
+                return;
+
+            ZDOID id = pkg.ReadZDOID();
+            int revision = pkg.ReadInt();
+            byte[] data = pkg.ReadByteArray();
+            if (data == null || revision <= 0)
+                return;
+
+            if (!SetShipMapData(id, revision, data))
+                return;
+
+            ZDO zdo = ZDOMan.instance?.GetZDO(id);
+            if (zdo != null)
+            {
+                if (!zdo.GetBool(LongshipCustomizableParts.s_mapDataCompressed))
+                    zdo.Set(LongshipCustomizableParts.s_mapDataCompressed, true);
+
+                SyncShipMapRevision(zdo, revision);
+
+                RemoveShipMapDataFromRuntime(id);
+            }
+
+            LogInfo($"Ship map data for {id} submitted from {sender}");
+        }
+
+        [HarmonyPatch(typeof(ZDOMan), nameof(ZDOMan.Load))]
+        public static class ZDOMan_Load_TrackShipMapZdos
+        {
+            public static void Postfix(ZDOMan __instance)
+            {
+                RebuildTrackedShipZdos(__instance.m_objectsByID.Values);
+            }
+        }
+
+        [HarmonyPatch(typeof(ZDOMan), nameof(ZDOMan.CreateNewZDO), new Type[] { typeof(Vector3), typeof(int) })]
+        public static class ZDOMan_CreateNewZDO_TrackShipMapZdos
+        {
+            public static void Postfix(ZDO __result)
+            {
+                TrackShipZdo(__result, extractFromRuntime: true);
+            }
+        }
+
+        [HarmonyPatch(typeof(ZDOMan), nameof(ZDOMan.CreateNewZDO), new Type[] { typeof(ZDOID), typeof(Vector3), typeof(int) })]
+        public static class ZDOMan_CreateNewZDO_WithUid_TrackShipMapZdos
+        {
+            public static void Postfix(ZDO __result)
+            {
+                TrackShipZdo(__result, extractFromRuntime: true);
+            }
+        }
+
+        [HarmonyPatch(typeof(ZDOMan), nameof(ZDOMan.HandleDestroyedZDO))]
+        public static class ZDOMan_HandleDestroyedZDO_ClearShipMapStore
+        {
+            public static void Prefix(ZDOID uid)
+            {
+                RemoveShipMapData(uid);
+            }
+        }
+
+        [HarmonyPatch(typeof(ZDO), nameof(ZDO.Deserialize))]
+        public static class ZDO_Deserialize_TrackShipMapData
+        {
+            public static void Postfix(ZDO __instance)
+            {
+                TrackShipZdo(__instance, extractFromRuntime: true);
+            }
+        }
+
+        [HarmonyPatch(typeof(ZDOMan), nameof(ZDOMan.PrepareSave))]
+        public static class ZDOMan_PrepareSave_InjectShipMapData
+        {
+            public static void Prefix()
+            {
+                if (ZNet.instance != null && ZNet.instance.IsServer())
+                    InjectAllTrackedShipMapDataIntoRuntime();
+            }
+
+            public static void Postfix()
+            {
+                RemoveInjectedShipMapDataFromRuntime();
+            }
+        }
+
+        [HarmonyPatch(typeof(ZDOMan), nameof(ZDOMan.Update))]
+        public static class ZDOMan_Update_PruneClientShipMapStore
+        {
+            public static void Postfix()
+            {
+                PruneClientShipMapStore();
+            }
         }
 
         [HarmonyPatch(typeof(Ship), nameof(Ship.UpdateControlls))]
@@ -571,6 +958,8 @@ namespace LongshipUpgrades
         private static readonly Stack<bool> s_mapTableDataCompressionFlags = new Stack<bool>();
         private static int s_mapTableWriteDepth = 0;
 
+        private static readonly int s_shipMapDataRevision = "ShipMapDataRevision".GetStableHashCode();
+
         private static bool IsShipMapTable(MapTable mapTable)
         {
             return mapTable.name == LongshipCustomizableParts.mapTablePrefabName && IsControlledComponent(mapTable);
@@ -590,13 +979,24 @@ namespace LongshipUpgrades
                 if (!__state)
                     return;
 
-                s_mapTableDataCompressionFlags.Push(__instance.m_nview && __instance.m_nview.IsValid() && __instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_mapDataCompressed));
+                if (IsValidMapTable(__instance))
+                    InjectShipMapDataIntoZdo(__instance.m_nview.GetZDO());
+
+                s_mapTableDataCompressionFlags.Push(IsValidMapTable(__instance) && __instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_mapDataCompressed));
             }
 
-            public static void Postfix(bool __state)
+            public static Exception Finalizer(MapTable __instance, bool __state, Exception __exception)
             {
-                if (__state && s_mapTableDataCompressionFlags.Count > 0)
-                    s_mapTableDataCompressionFlags.Pop();
+                if (__state)
+                {
+                    if (s_mapTableWriteDepth == 0 && IsValidMapTable(__instance))
+                        RemoveShipMapDataFromRuntime(__instance.m_nview.GetZDO().m_uid);
+
+                    if (s_mapTableDataCompressionFlags.Count > 0)
+                        s_mapTableDataCompressionFlags.Pop();
+                }
+
+                return __exception;
             }
         }
 
@@ -613,33 +1013,107 @@ namespace LongshipUpgrades
                 if (!__state)
                     return;
 
+                if (IsValidMapTable(__instance))
+                    InjectShipMapDataIntoZdo(__instance.m_nview.GetZDO());
+
                 s_mapTableWriteDepth++;
-                s_mapTableDataCompressionFlags.Push(__instance.m_nview && __instance.m_nview.IsValid() && __instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_mapDataCompressed));
+                s_mapTableDataCompressionFlags.Push(IsValidMapTable(__instance) && __instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_mapDataCompressed));
             }
 
-            public static void Postfix(bool __state)
+            public static Exception Finalizer(MapTable __instance, bool __state, Exception __exception)
             {
                 inCall = false;
 
-                if (!__state)
-                    return;
+                if (__state)
+                {
+                    if (IsValidMapTable(__instance))
+                        RemoveShipMapDataFromRuntime(__instance.m_nview.GetZDO().m_uid);
 
-                if (s_mapTableDataCompressionFlags.Count > 0)
-                    s_mapTableDataCompressionFlags.Pop();
+                    if (s_mapTableDataCompressionFlags.Count > 0)
+                        s_mapTableDataCompressionFlags.Pop();
 
-                s_mapTableWriteDepth = Math.Max(0, s_mapTableWriteDepth - 1);
+                    s_mapTableWriteDepth = Math.Max(0, s_mapTableWriteDepth - 1);
+                }
+
+                return __exception;
             }
         }
 
         [HarmonyPatch(typeof(MapTable), nameof(MapTable.RPC_MapData))]
         public static class MapTable_RPC_MapData_MarkCompressed
         {
-            public static void Postfix(MapTable __instance)
+            public static void Prefix(MapTable __instance, ref byte[] __state)
+            {
+                __state = null;
+                if (!IsShipMapTable(__instance) || !IsValidMapTable(__instance) || !__instance.m_nview.IsOwner())
+                    return;
+
+                ZDO zdo = __instance.m_nview.GetZDO();
+                InjectShipMapDataIntoZdo(zdo);
+                if (TryGetShipMapData(zdo.m_uid, out ShipMapDataEntry entry) && entry.Data != null)
+                    __state = (byte[])entry.Data.Clone();
+            }
+
+            public static void Postfix(MapTable __instance, byte[] __state)
             {
                 if (!IsShipMapTable(__instance) || !__instance.m_nview.IsValid() || !__instance.m_nview.IsOwner())
                     return;
 
-                __instance.m_nview.GetZDO().Set(LongshipCustomizableParts.s_mapDataCompressed, true);
+                ZDO zdo = __instance.m_nview.GetZDO();
+                byte[] currentMapData = zdo.GetByteArray(ZDOVars.s_data);
+                bool changed = __state == null
+                    ? currentMapData != null
+                    : currentMapData == null || !StructuralComparisons.StructuralEqualityComparer.Equals(__state, currentMapData);
+
+                int revision = Math.Max(zdo.GetInt(s_shipMapDataRevision), GetShipMapRevision(zdo.m_uid));
+                if (currentMapData != null)
+                {
+                    revision = changed ? Math.Max(1, revision + 1) : Math.Max(1, revision);
+                    SetShipMapData(zdo.m_uid, revision, currentMapData);
+                    zdo.Set(LongshipCustomizableParts.s_mapDataCompressed, true);
+                    SyncShipMapRevision(zdo, revision);
+
+                    if (ZNet.instance != null && !ZNet.instance.IsServer())
+                        SubmitShipMapDataToServer(zdo, revision, currentMapData);
+                }
+
+                RemoveShipMapDataFromRuntime(zdo.m_uid);
+            }
+        }
+
+        [HarmonyPatch(typeof(ZDO), nameof(ZDO.Serialize))]
+        public static class ZDO_Serialize_SkipUnchangedShipMapData
+        {
+            public struct SerializeState
+            {
+                public bool Removed;
+                public byte[] Data;
+            }
+
+            public static void Prefix(ZDO __instance, ref SerializeState __state)
+            {
+                __state = default;
+
+                if (__instance.GetPrefab() != LongshipCustomizableParts.prefabInt)
+                    return;
+
+                if (!__instance.GetBool(LongshipCustomizableParts.s_mapDataCompressed))
+                    return;
+
+                if (!ZDOExtraData.s_byteArrays.TryGetValue(__instance.m_uid, out BinarySearchDictionary<int, byte[]> byteArrays) || !byteArrays.TryGetValue(ZDOVars.s_data, out byte[] mapData) || mapData == null)
+                    return;
+
+                __state.Removed = byteArrays.Remove(ZDOVars.s_data);
+                __state.Data = mapData;
+
+                if (__state.Removed && byteArrays.Count == 0)
+                    ZDOExtraData.s_byteArrays.Remove(__instance.m_uid);
+            }
+
+            public static void Postfix(ZDO __instance, SerializeState __state)
+            {
+                if (__state.Removed)
+                    ZDOExtraData.Set(__instance.m_uid, ZDOVars.s_data, __state.Data);
             }
         }
 
