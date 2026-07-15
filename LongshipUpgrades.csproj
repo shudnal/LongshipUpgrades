@@ -35,6 +35,7 @@
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ItemNameTokens.cs" />
     <Compile Include="LocalizationManager.cs" />
     <Compile Include="LongshipCustomizableParts.cs" />
     <Compile Include="LongshipPartController.cs" />
@@ -64,9 +65,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\stable\netstandard.dll</HintPath>
     </Reference>
-    <Reference Include="ServerSync, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ConditionalConfigSync, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>Libs\ServerSync.dll</HintPath>
+      <HintPath>..\Assemblies\Managers\ConditionalConfigSync.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="SoftReferenceableAssets, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -133,6 +135,7 @@
   <ItemGroup>
     <None Include="EmbeddedLocalizations.csv" />
     <None Include="ILRepack.targets" />
+    <None Include="UpdateThunderstoreManifest.ps1" />
     <EmbeddedResource Include="translations\English.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>

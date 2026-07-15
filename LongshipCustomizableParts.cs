@@ -458,8 +458,8 @@ namespace LongshipUpgrades
             if (m_nview.IsValid() && m_nview.IsOwner())
             {
                 m_zdo.Set(zdoVar, true);
-                if (!string.IsNullOrWhiteSpace(stationName))
-                    buildEffects[stationName]?.Create(ParseVector3(position), Quaternion.identity);
+                if (!string.IsNullOrWhiteSpace(stationName) && buildEffects.TryGetValue(stationName, out EffectList effects))
+                    effects?.Create(ParseVector3(position), Quaternion.identity);
             }
         }
 

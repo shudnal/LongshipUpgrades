@@ -22,7 +22,7 @@ namespace LongshipUpgrades
                 m_zdoVar = zdoVar;
                 m_requirements = requirements;
                 m_messageUpgrade = message;
-                m_stationName = station;
+                m_stationName = station.GetCraftingStationName();
                 m_stationLevel = level;
                 m_stationRange = range;
             }

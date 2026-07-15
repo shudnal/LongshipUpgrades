@@ -1,3 +1,12 @@
+# 1.0.17
+* enabled strict ModRequired admission: Longship Upgrades must now be installed on the server and every connecting client because ship component changes and map-data synchronization use mod-specific RPCs
+* migrated configuration synchronization from ServerSync to ConditionalConfigSync
+* shared ship upgrade mechanics are now explicitly server-controlled while client presentation settings remain policy-controlled
+* upgrade recipes now accept item prefab names and localization tokens without case sensitivity
+* crafting stations can now be configured by localization token or prefab name without case sensitivity
+* corrected FineWood and Raspberry prefab names in default recipes
+* localizations revised
+
 # 1.0.16
 * rehauled map data storage and sync between clients to prevent increased network traffic caused by ships with map table
 

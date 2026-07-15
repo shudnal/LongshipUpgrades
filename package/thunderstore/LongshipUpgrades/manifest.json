@@ -1,10 +1,11 @@
 {
-    "name": "LongshipUpgrades",
-    "version_number": "1.0.16",
-    "website_url": "https://github.com/shudnal/LongshipUpgrades",
-    "description": "Upgrade your vanilla Longship piece by piece with lantern, changeable sails, tent, shields, extended storage and more.",
-    "dependencies": [
-      "denikson-BepInExPack_Valheim-5.4.2333",
-      "ValheimModding-YamlDotNet-16.3.1"
-    ]
+  "name": "LongshipUpgrades",
+  "version_number": "1.0.17",
+  "website_url": "https://github.com/shudnal/LongshipUpgrades",
+  "description": "Upgrade your vanilla Longship piece by piece with lantern, changeable sails, tent, shields, extended storage and more.",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2333",
+    "ValheimModding-YamlDotNet-16.3.1",
+    "shudnal-ConditionalConfigSync-1.0.2"
+  ]
 }

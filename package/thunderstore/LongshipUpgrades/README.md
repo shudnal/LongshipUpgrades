@@ -119,8 +119,27 @@ You can send me a file with your localization at [GitHub](https://github.com/shu
 
 English localization example is located in `Longship Upgrades.English.json` file next to plugin dll.
 
+## Multiplayer requirement
+* Starting with version 1.0.17, Longship Upgrades must be installed on the server and on every connecting client
+* The current implementation uses mod-specific RPCs for ship component changes and cartography-table map-data transfer. Mixed modded and unmodded peers cannot maintain the same ship state and are rejected during connection admission
+* Use compatible versions of the mod on all peers
+
+## Conditional Config Sync
+* Shared ship-upgrade mechanics, permissions, dimensions, recipes, station requirements, gameplay effects and synchronized style state are always controlled by the server
+* Hint colors and diagnostic logging use local client values unless the server policy overrides them. Lantern light color and trophy presentation settings are policy-controlled and may be released to clients or enforced by the server administrator
+* Server administrators can change the synchronization policy for policy-controlled settings in `BepInEx/config/shudnal.ConditionalConfigSync/ConditionalConfigSync.SyncPolicy.cfg`
+* Prefix an exact setting or whole-section identifier with `+` to force server control or `-` to make it client-controlled. Exact-setting rules take precedence over whole-section rules
+* Use shared modpack configs or distribute your config manually if you also want client-controlled presentation settings to be identical for all players initially
+* If you install this mod manually, install [ConditionalConfigSync](https://thunderstore.io/c/valheim/p/shudnal/ConditionalConfigSync/) as well
+
+## Recipe and crafting station identifiers
+* Recipe entries accept item prefab names such as `FineWood` and localization tokens such as `$item_finewood`
+* Item identifiers are matched without case sensitivity, but the bundled defaults use the canonical prefab spelling
+* Crafting stations accept either localization tokens such as `$piece_workbench` or prefab names such as `piece_workbench`
+* Crafting station identifiers are also matched without case sensitivity
+
 ## Installation (manual)
-extract LongshipUpgrades.dll into your BepInEx\Plugins\ folder
+Install Longship Upgrades and ConditionalConfigSync on the dedicated server and on every client, then extract `LongshipUpgrades.dll` into the `BepInEx\plugins` folder.
 
 ## Configurating
 The best way to handle configs is [Configuration Manager](https://thunderstore.io/c/valheim/p/shudnal/ConfigurationManager/).

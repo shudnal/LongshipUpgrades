@@ -1,7 +1,7 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
-using ServerSync;
+using ConditionalConfigSync;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,15 +13,22 @@ using UnityEngine;
 namespace LongshipUpgrades
 {
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
+    [BepInDependency("_shudnal.ConditionalConfigSync", BepInDependency.DependencyFlags.HardDependency)]
     public class LongshipUpgrades : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.16";
+        public const string pluginVersion = "1.0.17";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
-        internal static readonly ConfigSync configSync = new ConfigSync(pluginID) { DisplayName = pluginName, CurrentVersion = pluginVersion, MinimumRequiredVersion = pluginVersion };
+        internal static readonly ConfigSync configSync = new ConfigSync(pluginID)
+        {
+            DisplayName = pluginName,
+            CurrentVersion = pluginVersion,
+            MinimumRequiredVersion = pluginVersion,
+            ModRequired = true
+        };
 
         internal static LongshipUpgrades instance;
 
@@ -143,97 +150,97 @@ namespace LongshipUpgrades
         {
             config("General", "NexusID", 2885, "Nexus mod ID for updates", false);
 
-            configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only.");
-            loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging. [Not Synced with Server]", false);
-            onlyCreatorUpgrades = config("General", "Only creator can upgrade ship", defaultValue: true, "Only ship's creator can upgrade it.");
-            onlyCreatorStand = config("General", "Only creator can change trophy", defaultValue: true, "Only ship's creator can put and get trophy from stand.");
+            configLocked = serverConfig("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only.");
+            loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging.", false);
+            onlyCreatorUpgrades = serverConfig("General", "Only creator can upgrade ship", defaultValue: true, "Only ship's creator can upgrade it.");
+            onlyCreatorStand = serverConfig("General", "Only creator can change trophy", defaultValue: true, "Only ship's creator can put and get trophy from stand.");
 
-            hintStationColor = config("Hint", "Station color", defaultValue: new Color(0.75f, 1f, 0.75f, 1f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
-            hintColor = config("Hint", "Hint color", defaultValue: new Color(0.678f, 0.847f, 0.902f, 1f), "Color of hint in upgrade tooltip. [Not Synced with Server]", false);
-            hintAmountColor = config("Hint", "Entry amount color", defaultValue: Color.yellow, "Color for amount. [Not Synced with Server]", false);
-            hintItemColor = config("Hint", "Entry item name color", defaultValue: new Color(0.85f, 0.85f, 0.85f, 1f), "Color for item name. [Not Synced with Server]", false);
+            hintStationColor = config("Hint", "Station color", defaultValue: new Color(0.75f, 1f, 0.75f, 1f), "Color of hint in upgrade tooltip.", false);
+            hintColor = config("Hint", "Hint color", defaultValue: new Color(0.678f, 0.847f, 0.902f, 1f), "Color of hint in upgrade tooltip.", false);
+            hintAmountColor = config("Hint", "Entry amount color", defaultValue: Color.yellow, "Color for amount.", false);
+            hintItemColor = config("Hint", "Entry item name color", defaultValue: new Color(0.85f, 0.85f, 0.85f, 1f), "Color for item name.", false);
 
-            containerEnabled = config("Container", "Enable upgrades", defaultValue: true, "Container upgrades. Pls be aware items in upgraded slots will be unavailable after mod disabling. But it will drop on ship destruction.");
-            containerWidth = config("Container", "Upgrade - Lvl 1 - Container Width", defaultValue: 7, "Width of ship container after first upgrade.");
-            containerLvl1Station = config("Container", "Upgrade - Lvl 1 - Station name", defaultValue: "$piece_workbench", "Station name token. The center of the ship is the starting point of the check.");
-            containerLvl1StationLvl = config("Container", "Upgrade - Lvl 1 - Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
-            containerLvl1StationRange = config("Container", "Upgrade - Lvl 1 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
-            containerLvl1UpgradeRecipe = config("Container", "Upgrade - Lvl 1 - Recipe", defaultValue: "ElderBark:20,Silver:5,Obsidian:10", "Container lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            containerHeight = config("Container", "Upgrade - Lvl 2 - Container Height", defaultValue: 4, "Height of ship container after second upgrade.");
-            containerLvl2Station = config("Container", "Upgrade - Lvl 2 - Station name", defaultValue: "$piece_artisanstation", "Station name token. The center of the ship is the starting point of the check.");
-            containerLvl2StationLvl = config("Container", "Upgrade - Lvl 2 - Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
-            containerLvl2StationRange = config("Container", "Upgrade - Lvl 2 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
-            containerLvl2UpgradeRecipe = config("Container", "Upgrade - Lvl 2 - Recipe", defaultValue: "BlackMetal:20,YggdrasilWood:20,Finewood:20", "Container lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            containerEnabled = serverConfig("Container", "Enable upgrades", defaultValue: true, "Container upgrades. Pls be aware items in upgraded slots will be unavailable after mod disabling. But it will drop on ship destruction.");
+            containerWidth = serverConfig("Container", "Upgrade - Lvl 1 - Container Width", defaultValue: 7, "Width of ship container after first upgrade.");
+            containerLvl1Station = serverConfig("Container", "Upgrade - Lvl 1 - Station name", defaultValue: "$piece_workbench", "Station localization token or prefab name. Matching is case-insensitive. The center of the ship is the starting point of the check.");
+            containerLvl1StationLvl = serverConfig("Container", "Upgrade - Lvl 1 - Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
+            containerLvl1StationRange = serverConfig("Container", "Upgrade - Lvl 1 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            containerLvl1UpgradeRecipe = serverConfig("Container", "Upgrade - Lvl 1 - Recipe", defaultValue: "ElderBark:20,Silver:5,Obsidian:10", "Container lvl 1 upgrade recipe. Item identifiers accept prefab names or localization tokens without case sensitivity. World restart or ship rebuild required to apply changes.");
+            containerHeight = serverConfig("Container", "Upgrade - Lvl 2 - Container Height", defaultValue: 4, "Height of ship container after second upgrade.");
+            containerLvl2Station = serverConfig("Container", "Upgrade - Lvl 2 - Station name", defaultValue: "$piece_artisanstation", "Station localization token or prefab name. Matching is case-insensitive. The center of the ship is the starting point of the check.");
+            containerLvl2StationLvl = serverConfig("Container", "Upgrade - Lvl 2 - Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
+            containerLvl2StationRange = serverConfig("Container", "Upgrade - Lvl 2 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            containerLvl2UpgradeRecipe = serverConfig("Container", "Upgrade - Lvl 2 - Recipe", defaultValue: "BlackMetal:20,YggdrasilWood:20,FineWood:20", "Container lvl 2 upgrade recipe. Item identifiers accept prefab names or localization tokens without case sensitivity. World restart or ship rebuild required to apply changes.");
 
-            healthEnabled = config("Hull", "Enable upgrades", defaultValue: true, "Health upgrades.");
-            healthUpgradeLvl1 = config("Hull", "Upgrade - Lvl 1 - Health", defaultValue: 1500, "Health of ship hull after first upgrade.");
-            healthLvl1Station = config("Hull", "Upgrade - Lvl 1 - Station name", defaultValue: "$piece_forge", "Station name token. The center of the ship is the starting point of the check.");
-            healthLvl1StationLvl = config("Hull", "Upgrade - Lvl 1 - Station level", defaultValue: 7, "Station level. At least one station in the range must meet the level requirement.");
-            healthLvl1StationRange = config("Hull", "Upgrade - Lvl 1 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
-            healthUpgradeRecipe = config("Hull", "Upgrade - Lvl 1 - Recipe", defaultValue: "FineWood:20,BlackMetal:10,Raspberry:2,Blueberries:2,Coal:2", "Hull lvl 1 upgrade recipe. World restart or ship rebuild required to apply changes.");
-            healthUpgradeLvl2 = config("Hull", "Upgrade - Lvl 2 - Health", defaultValue: 2000, "Health of ship hull after second upgrade. Set to 0 to disable upgrade.");
-            ashlandsProtection = config("Hull", "Upgrade - Lvl 2 - Ashlands protection", defaultValue: true, "Should ship be protected from ashlands ocean after second upgrade. If disabled - second upgrade will not be available.");
-            healthLvl2Station = config("Hull", "Upgrade - Lvl 2 - Station name", defaultValue: "$piece_blackforge", "Station name token. The center of the ship is the starting point of the check.");
-            healthLvl2StationLvl = config("Hull", "Upgrade - Lvl 2 - Station level", defaultValue: 3, "Station level. At least one station in the range must meet the level requirement.");
-            healthLvl2StationRange = config("Hull", "Upgrade - Lvl 2 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
-            ashlandsUpgradeRecipe = config("Hull", "Upgrade - Lvl 2 - Recipe", defaultValue: "CeramicPlate:20,Tar:20,YggdrasilWood:20,IronNails:50", "Hull lvl 2 upgrade recipe. World restart or ship rebuild required to apply changes.");
+            healthEnabled = serverConfig("Hull", "Enable upgrades", defaultValue: true, "Health upgrades.");
+            healthUpgradeLvl1 = serverConfig("Hull", "Upgrade - Lvl 1 - Health", defaultValue: 1500, "Health of ship hull after first upgrade.");
+            healthLvl1Station = serverConfig("Hull", "Upgrade - Lvl 1 - Station name", defaultValue: "$piece_forge", "Station localization token or prefab name. Matching is case-insensitive. The center of the ship is the starting point of the check.");
+            healthLvl1StationLvl = serverConfig("Hull", "Upgrade - Lvl 1 - Station level", defaultValue: 7, "Station level. At least one station in the range must meet the level requirement.");
+            healthLvl1StationRange = serverConfig("Hull", "Upgrade - Lvl 1 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            healthUpgradeRecipe = serverConfig("Hull", "Upgrade - Lvl 1 - Recipe", defaultValue: "FineWood:20,BlackMetal:10,Raspberry:2,Blueberries:2,Coal:2", "Hull lvl 1 upgrade recipe. Item identifiers accept prefab names or localization tokens without case sensitivity. World restart or ship rebuild required to apply changes.");
+            healthUpgradeLvl2 = serverConfig("Hull", "Upgrade - Lvl 2 - Health", defaultValue: 2000, "Health of ship hull after second upgrade. Set to 0 to disable upgrade.");
+            ashlandsProtection = serverConfig("Hull", "Upgrade - Lvl 2 - Ashlands protection", defaultValue: true, "Should ship be protected from ashlands ocean after second upgrade. If disabled - second upgrade will not be available.");
+            healthLvl2Station = serverConfig("Hull", "Upgrade - Lvl 2 - Station name", defaultValue: "$piece_blackforge", "Station localization token or prefab name. Matching is case-insensitive. The center of the ship is the starting point of the check.");
+            healthLvl2StationLvl = serverConfig("Hull", "Upgrade - Lvl 2 - Station level", defaultValue: 3, "Station level. At least one station in the range must meet the level requirement.");
+            healthLvl2StationRange = serverConfig("Hull", "Upgrade - Lvl 2 - Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            ashlandsUpgradeRecipe = serverConfig("Hull", "Upgrade - Lvl 2 - Recipe", defaultValue: "CeramicPlate:20,Tar:20,YggdrasilWood:20,IronNails:50", "Hull lvl 2 upgrade recipe. Item identifiers accept prefab names or localization tokens without case sensitivity. World restart or ship rebuild required to apply changes.");
 
-            lanternEnabled = config("Lantern", "Enable upgrades", defaultValue: true, "Lantern upgrades requires mast to be upgraded.");
-            lanternRemovable = config("Lantern", "Make removable", defaultValue: true, "Make lantern removable. World restart or ship rebuild required to apply changes.");
-            lanternAutoSwtich = config("Lantern", "Light auto enabled and disabled", defaultValue: true, "Light will be automatically enabled in night time or dark environments and automatically disabled in day light");
-            lanternSwitchable = config("Lantern", "Light switch enabled", defaultValue: true, "Enable manual light switch. World restart or ship rebuild required to apply changes.");
+            lanternEnabled = serverConfig("Lantern", "Enable upgrades", defaultValue: true, "Lantern upgrades requires mast to be upgraded.");
+            lanternRemovable = serverConfig("Lantern", "Make removable", defaultValue: true, "Make lantern removable. World restart or ship rebuild required to apply changes.");
+            lanternAutoSwtich = serverConfig("Lantern", "Light auto enabled and disabled", defaultValue: true, "Light will be automatically enabled in night time or dark environments and automatically disabled in day light");
+            lanternSwitchable = serverConfig("Lantern", "Light switch enabled", defaultValue: true, "Enable manual light switch. World restart or ship rebuild required to apply changes.");
             lanternLightColor = config("Lantern", "Light color", defaultValue: new Color(0.96f, 0.78f, 0.68f, 1f), "Color of lantern light. Switch light to apply changes.");
-            lanternUpgradeRecipe = config("Lantern", "Recipe", defaultValue: "SurtlingCore:3,BronzeNails:10,FineWood:6,Chain:1", "Lantern upgrade recipe. World restart or ship rebuild required to apply changes.");
-            lanternStation = config("Lantern", "Station name", defaultValue: "$piece_forge", "Station name token. The center of the ship is the starting point of the check.");
-            lanternStationLvl = config("Lantern", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
-            lanternStationRange = config("Lantern", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            lanternUpgradeRecipe = serverConfig("Lantern", "Recipe", defaultValue: "SurtlingCore:3,BronzeNails:10,FineWood:6,Chain:1", "Lantern upgrade recipe. Item identifiers accept prefab names or localization tokens without case sensitivity. World restart or ship rebuild required to apply changes.");
+            lanternStation = serverConfig("Lantern", "Station name", defaultValue: "$piece_forge", "Station localization token or prefab name. Matching is case-insensitive. The center of the ship is the starting point of the check.");
+            lanternStationLvl = serverConfig("Lantern", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
+            lanternStationRange = serverConfig("Lantern", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
-            mastEnabled = config("Mast", "Enable upgrades", defaultValue: true, "Mast upgrade also makes lantern, tent and wisp torch upgrades possible.");
-            mastRemovable = config("Mast", "Make removable", defaultValue: true, "Enable mast removal. World restart or ship rebuild required to apply changes.");
-            mastUpgradeRecipe = config("Mast", "Recipe", defaultValue: "RoundLog:2,IronNails:10,Finewood:4,Raspberries:2,Blueberries:2,Coal:2", "Mast upgrade recipe. World restart or ship rebuild required to apply changes.");
-            mastStation = config("Mast", "Station name", defaultValue: "$piece_workbench", "Station name token. The center of the ship is the starting point of the check.");
-            mastStationLvl = config("Mast", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
-            mastStationRange = config("Mast", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            mastEnabled = serverConfig("Mast", "Enable upgrades", defaultValue: true, "Mast upgrade also makes lantern, tent and wisp torch upgrades possible.");
+            mastRemovable = serverConfig("Mast", "Make removable", defaultValue: true, "Enable mast removal. World restart or ship rebuild required to apply changes.");
+            mastUpgradeRecipe = serverConfig("Mast", "Recipe", defaultValue: "RoundLog:2,IronNails:10,FineWood:4,Raspberry:2,Blueberries:2,Coal:2", "Mast upgrade recipe. Item identifiers accept prefab names or localization tokens without case sensitivity. World restart or ship rebuild required to apply changes.");
+            mastStation = serverConfig("Mast", "Station name", defaultValue: "$piece_workbench", "Station localization token or prefab name. Matching is case-insensitive. The center of the ship is the starting point of the check.");
+            mastStationLvl = serverConfig("Mast", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
+            mastStationRange = serverConfig("Mast", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
-            tentEnabled = config("Tent", "Enable upgrades", defaultValue: true, "Tent upgrades requires mast to be upgraded.");
-            tentHeat = config("Tent", "Heat enabled", defaultValue: true, "Enable heat zone under the tent to get place to rest. Enabled lantern required.");
-            tentRemovable = config("Tent", "Make removable", defaultValue: true, "Enable tent removal. World restart or ship rebuild required to apply changes.");
-            tentUpgradeRecipe = config("Tent", "Recipe", defaultValue: "JuteRed:2,LoxPelt:2,LinenThread:6,RoundLog:2", "Tent upgrade recipe. World restart or ship rebuild required to apply changes.");
-            tentStation = config("Tent", "Station name", defaultValue: "$piece_workbench", "Station name token. The center of the ship is the starting point of the check.");
-            tentStationLvl = config("Tent", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
-            tentStationRange = config("Tent", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            tentEnabled = serverConfig("Tent", "Enable upgrades", defaultValue: true, "Tent upgrades requires mast to be upgraded.");
+            tentHeat = serverConfig("Tent", "Heat enabled", defaultValue: true, "Enable heat zone under the tent to get place to rest. Enabled lantern required.");
+            tentRemovable = serverConfig("Tent", "Make removable", defaultValue: true, "Enable tent removal. World restart or ship rebuild required to apply changes.");
+            tentUpgradeRecipe = serverConfig("Tent", "Recipe", defaultValue: "JuteRed:2,LoxPelt:2,LinenThread:6,RoundLog:2", "Tent upgrade recipe. Item identifiers accept prefab names or localization tokens without case sensitivity. World restart or ship rebuild required to apply changes.");
+            tentStation = serverConfig("Tent", "Station name", defaultValue: "$piece_workbench", "Station localization token or prefab name. Matching is case-insensitive. The center of the ship is the starting point of the check.");
+            tentStationLvl = serverConfig("Tent", "Station level", defaultValue: 4, "Station level. At least one station in the range must meet the level requirement.");
+            tentStationRange = serverConfig("Tent", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
             
-            wispEnabled = config("Wisp torch", "Enable upgrades", defaultValue: true, "Wisp torch pushes away the surrounding magic mist.");
-            wispUpgradeRecipe = config("Wisp torch", "Recipe", defaultValue: "YggdrasilWood:10,Wisp:5,Eitr:5", "Wisp Torch upgrade recipe. World restart or ship rebuild required to apply changes.");
-            wispStation = config("Wisp torch", "Station name", defaultValue: "$piece_magetable", "Station name token. The center of the ship is the starting point of the check.");
-            wispStationLvl = config("Wisp torch", "Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
-            wispStationRange = config("Wisp torch", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            wispEnabled = serverConfig("Wisp torch", "Enable upgrades", defaultValue: true, "Wisp torch pushes away the surrounding magic mist.");
+            wispUpgradeRecipe = serverConfig("Wisp torch", "Recipe", defaultValue: "YggdrasilWood:10,Wisp:5,Eitr:5", "Wisp Torch upgrade recipe. Item identifiers accept prefab names or localization tokens without case sensitivity. World restart or ship rebuild required to apply changes.");
+            wispStation = serverConfig("Wisp torch", "Station name", defaultValue: "$piece_magetable", "Station localization token or prefab name. Matching is case-insensitive. The center of the ship is the starting point of the check.");
+            wispStationLvl = serverConfig("Wisp torch", "Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
+            wispStationRange = serverConfig("Wisp torch", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
-            turretsEnabled = config("Turrets", "Enable upgrades", defaultValue: true, "Enable turrets upgrades.");
-            turretsUpgradeRecipe = config("Turrets", "Recipe", defaultValue: "BlackMetal:15,YggdrasilWood:15,MechanicalSpring:5", "Turrets upgrade recipe. World restart or ship rebuild required to apply changes.");
-            turretsStation = config("Turrets", "Station name", defaultValue: "$piece_artisanstation", "Station name token. The center of the ship is the starting point of the check.");
-            turretsStationLvl = config("Turrets", "Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
-            turretsStationRange = config("Turrets", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            turretsEnabled = serverConfig("Turrets", "Enable upgrades", defaultValue: true, "Enable turrets upgrades.");
+            turretsUpgradeRecipe = serverConfig("Turrets", "Recipe", defaultValue: "BlackMetal:15,YggdrasilWood:15,MechanicalSpring:5", "Turrets upgrade recipe. Item identifiers accept prefab names or localization tokens without case sensitivity. World restart or ship rebuild required to apply changes.");
+            turretsStation = serverConfig("Turrets", "Station name", defaultValue: "$piece_artisanstation", "Station localization token or prefab name. Matching is case-insensitive. The center of the ship is the starting point of the check.");
+            turretsStationLvl = serverConfig("Turrets", "Station level", defaultValue: 1, "Station level. At least one station in the range must meet the level requirement.");
+            turretsStationRange = serverConfig("Turrets", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
-            itemStandEnabled = config("Item stand", "Enabled", defaultValue: true, "Enable item stand on bow for trophy.");
+            itemStandEnabled = serverConfig("Item stand", "Enabled", defaultValue: true, "Enable item stand on bow for trophy.");
             itemStandDisableSpeaking = config("Item stand", "Trophy speaking disabled", defaultValue: false, "Trophis will not do random speak. World restart or ship rebuild required to apply changes.");
             itemStandTrophyRescale = config("Item stand", "Trophy rescale", defaultValue: "TrophyBonemass:0,7;TrophyBonemawSerpent:0,7;TrophySeekerQueen:0,7;TrophyGoblinKing:0,7", "Some trophies are ginormous. Set smaller scale for them. Trophy rehook required to apply changes.");
-            itemStandForsakenPower = config("Item stand", "Forsaken power enabled", defaultValue: true, "Boss trophies brings an option to cast another Forsaken power while on ship.");
+            itemStandForsakenPower = serverConfig("Item stand", "Forsaken power enabled", defaultValue: true, "Boss trophies brings an option to cast another Forsaken power while on ship.");
 
-            mapTableEnabled = config("Map table", "Enable upgrades", defaultValue: true, "Cartography table allows to exchange map data between players.");
-            mapTableUpgradeRecipe = config("Map table", "Recipe", defaultValue: "FineWood:10,Bronze:2,LeatherScraps:5,Raspberry:4", "Map Table upgrade recipe. World restart or ship rebuild required to apply changes.");
-            mapTableStation = config("Map table", "Station name", defaultValue: "$piece_forge", "Station name token. The center of the ship is the starting point of the check.");
-            mapTableStationLvl = config("Map table", "Station level", defaultValue: 3, "Station level. At least one station in the range must meet the level requirement.");
-            mapTableStationRange = config("Map table", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
+            mapTableEnabled = serverConfig("Map table", "Enable upgrades", defaultValue: true, "Cartography table allows to exchange map data between players.");
+            mapTableUpgradeRecipe = serverConfig("Map table", "Recipe", defaultValue: "FineWood:10,Bronze:2,LeatherScraps:5,Raspberry:4", "Map Table upgrade recipe. Item identifiers accept prefab names or localization tokens without case sensitivity. World restart or ship rebuild required to apply changes.");
+            mapTableStation = serverConfig("Map table", "Station name", defaultValue: "$piece_forge", "Station localization token or prefab name. Matching is case-insensitive. The center of the ship is the starting point of the check.");
+            mapTableStationLvl = serverConfig("Map table", "Station level", defaultValue: 3, "Station level. At least one station in the range must meet the level requirement.");
+            mapTableStationRange = serverConfig("Map table", "Station range", defaultValue: 100, "Station range check. You don't have to park the ship inside your main house to be able to upgrade it.");
 
-            changeHead = config("Style", "Change heads", defaultValue: true, "Change ship's head style.");
-            changeShields = config("Style", "Change shields color", defaultValue: true, "Change shields colors. World restart or ship rebuild required to apply changes.");
-            changeTent = config("Style", "Change tent color", defaultValue: true, "Change tent colors. World restart or ship rebuild required to apply changes.");
-            changeSail = config("Style", "Change sail color", defaultValue: true, "Change sail colors. World restart or ship rebuild required to apply changes.");
-            maxShields = config("Style", "Max shields amount", defaultValue: 0, "Maximum amount of shield variants. If 0 - amount is taken from custom textures count."+
+            changeHead = serverConfig("Style", "Change heads", defaultValue: true, "Change ship's head style.");
+            changeShields = serverConfig("Style", "Change shields color", defaultValue: true, "Change shields colors. World restart or ship rebuild required to apply changes.");
+            changeTent = serverConfig("Style", "Change tent color", defaultValue: true, "Change tent colors. World restart or ship rebuild required to apply changes.");
+            changeSail = serverConfig("Style", "Change sail color", defaultValue: true, "Change sail colors. World restart or ship rebuild required to apply changes.");
+            maxShields = serverConfig("Style", "Max shields amount", defaultValue: 0, "Maximum amount of shield variants. If 0 - amount is taken from custom textures count."+
                                                                             "\n By default every custom texture counts as 3 shields. World restart or ship rebuild required to apply changes.");
-            maxTents = config("Style", "Max tents amount", defaultValue: 0, "Maximum amount of tent variants. If 0 - amount is taken from custom textures count. World restart or ship rebuild required to apply changes.");
-            maxSails = config("Style", "Max sails amount", defaultValue: 0, "Maximum amount of sail variants. If 0 - amount is taken from custom textures count. ");
+            maxTents = serverConfig("Style", "Max tents amount", defaultValue: 0, "Maximum amount of tent variants. If 0 - amount is taken from custom textures count. World restart or ship rebuild required to apply changes.");
+            maxSails = serverConfig("Style", "Max sails amount", defaultValue: 0, "Maximum amount of sail variants. If 0 - amount is taken from custom textures count. ");
         }
 
         private void OnDestroy()
@@ -254,17 +261,30 @@ namespace LongshipUpgrades
             instance.Logger.LogWarning(data);
         }
 
-        ConfigEntry<T> config<T>(string group, string name, T defaultValue, ConfigDescription description, bool synchronizedSetting = true)
-        {
-            ConfigEntry<T> configEntry = Config.Bind(group, name, defaultValue, description);
+        private ConfigEntry<T> config<T>(string group, string name, T defaultValue, ConfigDescription description, bool synchronizedSetting = true) =>
+            configSync.AddConfigEntry(
+                Config,
+                group,
+                name,
+                defaultValue,
+                description,
+                syncMode: ConfigSyncMode.Conditional,
+                serverControlledByDefault: synchronizedSetting).SourceConfig;
 
-            SyncedConfigEntry<T> syncedConfigEntry = configSync.AddConfigEntry(configEntry);
-            syncedConfigEntry.SynchronizedConfig = synchronizedSetting;
+        private ConfigEntry<T> config<T>(string group, string name, T defaultValue, string description, bool synchronizedSetting = true) =>
+            config(group, name, defaultValue, new ConfigDescription(description), synchronizedSetting);
 
-            return configEntry;
-        }
+        private ConfigEntry<T> serverConfig<T>(string group, string name, T defaultValue, ConfigDescription description) =>
+            configSync.AddConfigEntry(
+                Config,
+                group,
+                name,
+                defaultValue,
+                description,
+                syncMode: ConfigSyncMode.AlwaysServerControlled).SourceConfig;
 
-        ConfigEntry<T> config<T>(string group, string name, T defaultValue, string description, bool synchronizedSetting = true) => config(group, name, defaultValue, new ConfigDescription(description), synchronizedSetting);
+        private ConfigEntry<T> serverConfig<T>(string group, string name, T defaultValue, string description) =>
+            serverConfig(group, name, defaultValue, new ConfigDescription(description));
 
         private void LoadTextures()
         {
@@ -371,24 +391,23 @@ namespace LongshipUpgrades
             foreach (string requirement in recipe.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 string[] req = requirement.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
-                if (req.Length != 2)
+                if (req.Length != 2 || !int.TryParse(req[1].Trim(), out int amount) || amount <= 0)
                     continue;
 
-                int amount = int.Parse(req[1]);
-                if (amount <= 0)
+                string itemIdentifier = req[0].Trim();
+                if (!ItemNameTokens.TryGetItemPrefab(itemIdentifier, out GameObject prefab) || !prefab.TryGetComponent(out ItemDrop itemDrop))
+                {
+                    LogWarning($"Upgrade recipe item '{itemIdentifier}' was not found.");
                     continue;
+                }
 
-                var prefab = ObjectDB.instance.GetItemPrefab(req[0].Trim());
-                if (prefab == null)
-                    continue;
-
-                requirements.Add(new Piece.Requirement()
+                requirements.Add(new Piece.Requirement
                 {
                     m_amount = amount,
-                    m_resItem = prefab.GetComponent<ItemDrop>(),
+                    m_resItem = itemDrop,
                     m_recover = true
                 });
-            };
+            }
 
             return requirements.ToArray();
         }
@@ -399,6 +418,7 @@ namespace LongshipUpgrades
             [HarmonyPriority(Priority.Last)]
             private static void Postfix()
             {
+                ItemNameTokens.UpdateRegisters();
                 RegisterShipMapRpcs();
                 LongshipCustomizableParts.OnGlobalStart();
             }
