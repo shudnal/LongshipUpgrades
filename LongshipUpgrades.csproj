@@ -2,6 +2,7 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
+    <ReferencePath>D:\work\source\repos\Assemblies\stable\publicized_assemblies\;D:\work\source\repos\Assemblies\stable\;D:\work\source\repos\Assemblies\Harmony\;D:\work\source\repos\Assemblies\Managers\</ReferencePath>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{9273280B-9A2B-4143-A5D8-0723A4036A85}</ProjectGuid>
@@ -47,19 +48,22 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>F:\Steam\steamapps\common\Valheim\BepInEx\core\0Harmony.dll</HintPath>
+      <HintPath>..\Assemblies\Harmony\0Harmony.dll</HintPath>
     </Reference>
-    <Reference Include="assembly_guiutils_publicized">
-      <HintPath>..\Assemblies\beta\publicized_assemblies\assembly_guiutils_publicized.dll</HintPath>
+    <Reference Include="assembly_guiutils">
+      <HintPath>..\Assemblies\stable\publicized_assemblies\assembly_guiutils_publicized.dll</HintPath>
+      <HintPath Condition="Exists('..\Assemblies\stable\publicized_assemblies\assembly_guiutils.dll')">..\Assemblies\stable\publicized_assemblies\assembly_guiutils.dll</HintPath>
     </Reference>
-    <Reference Include="assembly_utils_publicized">
-      <HintPath>..\Assemblies\beta\publicized_assemblies\assembly_utils_publicized.dll</HintPath>
+    <Reference Include="assembly_utils">
+      <HintPath>..\Assemblies\stable\publicized_assemblies\assembly_utils_publicized.dll</HintPath>
+      <HintPath Condition="Exists('..\Assemblies\stable\publicized_assemblies\assembly_utils.dll')">..\Assemblies\stable\publicized_assemblies\assembly_utils.dll</HintPath>
     </Reference>
-    <Reference Include="assembly_valheim_publicized">
-      <HintPath>..\Assemblies\beta\publicized_assemblies\assembly_valheim_publicized.dll</HintPath>
+    <Reference Include="assembly_valheim">
+      <HintPath>..\Assemblies\stable\publicized_assemblies\assembly_valheim_publicized.dll</HintPath>
+      <HintPath Condition="Exists('..\Assemblies\stable\publicized_assemblies\assembly_valheim.dll')">..\Assemblies\stable\publicized_assemblies\assembly_valheim.dll</HintPath>
     </Reference>
     <Reference Include="BepInEx">
-      <HintPath>F:\Steam\steamapps\common\Valheim\BepInEx\core\BepInEx.dll</HintPath>
+      <HintPath>..\Assemblies\Harmony\BepInEx.dll</HintPath>
     </Reference>
     <Reference Include="netstandard, Version=2.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -90,15 +94,15 @@
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Assemblies\beta\UnityEngine.ImageConversionModule.dll</HintPath>
+      <HintPath>..\Assemblies\stable\UnityEngine.ImageConversionModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.ParticleSystemModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Assemblies\beta\UnityEngine.ParticleSystemModule.dll</HintPath>
+      <HintPath>..\Assemblies\stable\UnityEngine.ParticleSystemModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Assemblies\beta\UnityEngine.PhysicsModule.dll</HintPath>
+      <HintPath>..\Assemblies\stable\UnityEngine.PhysicsModule.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
 using ConditionalConfigSync;
@@ -13,12 +13,12 @@ using UnityEngine;
 namespace LongshipUpgrades
 {
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
-    [BepInDependency("_shudnal.ConditionalConfigSync", BepInDependency.DependencyFlags.HardDependency)]
+    [BepInDependency("_shudnal.ConditionalConfigSync", "1.0.5")]
     public class LongshipUpgrades : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.17";
+        public const string pluginVersion = "1.0.18";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -148,7 +148,6 @@ namespace LongshipUpgrades
 
         public void ConfigInit()
         {
-            config("General", "NexusID", 2885, "Nexus mod ID for updates", false);
 
             configLocked = serverConfig("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only.");
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging.", false);
@@ -815,9 +814,15 @@ namespace LongshipUpgrades
             LogInfo($"Ship map data for {id} submitted from {sender}");
         }
 
-        [HarmonyPatch(typeof(ZDOMan), nameof(ZDOMan.Load))]
+        [HarmonyPatch]
         public static class ZDOMan_Load_TrackShipMapZdos
         {
+            private static IEnumerable<System.Reflection.MethodBase> TargetMethods()
+            {
+                yield return AccessTools.Method(typeof(ZDOMan), nameof(ZDOMan.Load));
+                yield return AccessTools.Method(typeof(ZDOMan), nameof(ZDOMan.LoadChunks));
+            }
+
             public static void Postfix(ZDOMan __instance)
             {
                 RebuildTrackedShipZdos(__instance.m_objectsByID.Values);
@@ -990,7 +995,7 @@ namespace LongshipUpgrades
             return s_mapTableDataCompressionFlags.Count > 0 && s_mapTableDataCompressionFlags.Peek();
         }
 
-        [HarmonyPatch(typeof(MapTable), nameof(MapTable.OnRead), new Type[] { typeof(Switch), typeof(Humanoid), typeof(ItemDrop.ItemData) })]
+        [HarmonyPatch(typeof(MapTable), nameof(MapTable.OnRead), new Type[] { typeof(Switch), typeof(Humanoid), typeof(ItemDrop.ItemData), typeof(bool) })]
         public static class MapTable_OnRead_TrackCompressionContext
         {
             public static void Prefix(MapTable __instance, ref bool __state)
@@ -1130,7 +1135,7 @@ namespace LongshipUpgrades
                     ZDOExtraData.s_byteArrays.Remove(__instance.m_uid);
             }
 
-            public static void Postfix(ZDO __instance, SerializeState __state)
+            public static void Finalizer(ZDO __instance, SerializeState __state)
             {
                 if (__state.Removed)
                     ZDOExtraData.Set(__instance.m_uid, ZDOVars.s_data, __state.Data);
@@ -1140,7 +1145,7 @@ namespace LongshipUpgrades
         [HarmonyPatch(typeof(Minimap), nameof(Minimap.ReadExploredArray))]
         public static class Minimap_ReadExploredArray_CompressedShipMapData
         {
-            public static bool Prefix(Minimap __instance, ZPackage pkg, int version, ref List<bool> __result)
+            public static bool Prefix(Minimap __instance, ZPackage pkg, ref List<bool> __result)
             {
                 if (!IsCompressedMapDataContext())
                     return true;
@@ -1238,7 +1243,7 @@ namespace LongshipUpgrades
                 }
             }
 
-            public static void Postfix(EffectList __instance, bool __state)
+            public static void Finalizer(EffectList __instance, bool __state)
             {
                 if (__state)
                     __instance.m_effectPrefabs[0].m_scale = false;

@@ -215,6 +215,7 @@ namespace LongshipUpgrades
 
         public bool m_checkGuardStone = true;
         public float m_useDistance = 0f;
+        public float m_hoverOffset;
 
         public string m_messageEnable = "$lu_controller_message_enable";
         public string m_messageSwitch = "$lu_controller_message_switch";
@@ -295,6 +296,11 @@ namespace LongshipUpgrades
         public string GetHoverName()
         {
             return m_name;
+        }
+
+        public float GetHoverOffset()
+        {
+            return m_hoverOffset;
         }
 
         public bool Interact(Humanoid human, bool hold, bool alt)

@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +29,9 @@ namespace LongshipUpgrades
 
         public EffectList m_activatePowerEffectsPlayer = new EffectList();
 
-        public string m_visualName = "";
+        public int m_visualHash;
+
+        public int m_visualQuality;
 
         public int m_visualVariant;
 
@@ -43,6 +45,8 @@ namespace LongshipUpgrades
         public ZNetView m_nview;
 
         public Piece m_piece;
+
+        public float m_hoverOffset;
 
         public static ItemDrop.ItemData.ItemType supportedItemType = ItemDrop.ItemData.ItemType.Trophy;
 
@@ -60,7 +64,7 @@ namespace LongshipUpgrades
                 m_nview.Register("DropItem", RPC_DropItem);
                 m_nview.Register("RequestOwn", RPC_RequestOwn);
                 m_nview.Register("DestroyAttachment", RPC_DestroyAttachment);
-                m_nview.Register<string, int, int>("SetVisualItem", RPC_SetVisualItem);
+                m_nview.Register<int, int, int>("SetVisualItem", RPC_SetVisualItem);
                 InvokeRepeating("UpdateVisual", 1f, 4f);
             }
 
@@ -123,6 +127,11 @@ namespace LongshipUpgrades
         public string GetHoverName()
         {
             return m_name;
+        }
+
+        public float GetHoverOffset()
+        {
+            return m_hoverOffset;
         }
 
         public bool Interact(Humanoid user, bool hold, bool alt)
@@ -235,8 +244,8 @@ namespace LongshipUpgrades
         {
             if (m_nview.IsOwner() && HaveAttachment())
             {
-                m_nview.GetZDO().Set(ZDOVars.s_item, "");
-                m_nview.InvokeRPC(ZNetView.Everybody, "SetVisualItem", "", 0, 0);
+                SetAttachedItem(0);
+                m_nview.InvokeRPC(ZNetView.Everybody, "SetVisualItem", 0, 0, 0);
                 m_destroyEffects.Create(m_dropSpawnPoint.position, Quaternion.identity);
             }
         }
@@ -246,8 +255,14 @@ namespace LongshipUpgrades
             if (!HaveAttachment())
                 return;
 
-            string @string = m_nview.GetZDO().GetString(ZDOVars.s_item);
-            GameObject itemPrefab = ObjectDB.instance.GetItemPrefab(@string);
+            int itemHash = GetAttachedItem();
+            GameObject itemPrefab = ObjectDB.instance.GetItemPrefab(itemHash);
+            if (!itemPrefab)
+            {
+                LogWarning("Cannot drop trophy because its item prefab is missing: " + itemHash);
+                return;
+            }
+
             if ((bool)itemPrefab)
             {
                 Vector3 vector = Vector3.zero;
@@ -265,8 +280,8 @@ namespace LongshipUpgrades
                 m_effects.Create(m_dropSpawnPoint.position, Quaternion.identity);
             }
 
-            m_nview.GetZDO().Set(ZDOVars.s_item, "");
-            m_nview.InvokeRPC(ZNetView.Everybody, "SetVisualItem", "", 0, 0);
+            SetAttachedItem(0);
+            m_nview.InvokeRPC(ZNetView.Everybody, "SetVisualItem", 0, 0, 0);
         }
 
         public Transform GetAttach(ItemDrop.ItemData item)
@@ -284,11 +299,14 @@ namespace LongshipUpgrades
                 {
                     ItemDrop.ItemData itemData = m_queuedItem.Clone();
                     itemData.m_stack = 1;
-                    m_nview.GetZDO().Set(ZDOVars.s_item, m_queuedItem.m_dropPrefab.name);
+                    int itemHash = m_queuedItem.m_dropPrefab.name.GetStableHashCode();
+                    SetAttachedItem(itemHash);
                     ItemDrop.SaveToZDO(itemData, m_nview.GetZDO());
+                    m_nview.GetZDO().Set(ZDOVars.s_variant, itemData.m_variant);
+                    m_nview.GetZDO().Set(ZDOVars.s_quality, itemData.m_quality);
                     localPlayer.UnequipItem(m_queuedItem);
                     localPlayer.GetInventory().RemoveOneItem(m_queuedItem);
-                    m_nview.InvokeRPC(ZNetView.Everybody, "SetVisualItem", itemData.m_dropPrefab.name, itemData.m_variant, itemData.m_quality);
+                    m_nview.InvokeRPC(ZNetView.Everybody, "SetVisualItem", itemHash, itemData.m_variant, itemData.m_quality);
                     Transform attach = GetAttach(m_queuedItem);
                     m_effects.Create(attach.transform.position, Quaternion.identity);
                     Game.instance.IncrementPlayerStat(PlayerStatType.ItemStandUses);
@@ -308,40 +326,45 @@ namespace LongshipUpgrades
         {
             if (!(m_nview == null) && m_nview.IsValid())
             {
-                string @string = m_nview.GetZDO().GetString(ZDOVars.s_item);
+                int itemHash = GetAttachedItem();
                 int @int = m_nview.GetZDO().GetInt(ZDOVars.s_variant);
                 int int2 = m_nview.GetZDO().GetInt(ZDOVars.s_quality, 1);
-                SetVisualItem(@string, @int, int2);
+                SetVisualItem(itemHash, @int, int2);
             }
         }
 
-        public void RPC_SetVisualItem(long sender, string itemName, int variant, int quality)
+        public void RPC_SetVisualItem(long sender, int itemHash, int variant, int quality)
         {
-            SetVisualItem(itemName, variant, quality);
+            SetVisualItem(itemHash, variant, quality);
         }
 
-        public void SetVisualItem(string itemName, int variant, int quality)
+        public void SetVisualItem(int itemHash, int variant, int quality)
         {
-            if (m_visualName == itemName && m_visualVariant == variant)
+            if (m_visualHash == itemHash && m_visualVariant == variant && m_visualQuality == quality)
                 return;
 
-            m_visualName = itemName;
+            Destroy(m_visualItem);
+            m_visualItem = null;
+            m_visualHash = itemHash;
+            m_visualQuality = quality;
             m_visualVariant = variant;
             m_currentItemName = "";
-            m_guardianPower = trophyEffects.TryGetValue(itemName, out SE_Stats gpower) ? gpower : null;
-            if (m_visualName == "")
+            m_guardianPower = null;
+            if (m_visualHash == 0)
             {
                 Destroy(m_visualItem);
                 return;
             }
 
-            GameObject itemPrefab = ObjectDB.instance.GetItemPrefab(itemName);
+            GameObject itemPrefab = ObjectDB.instance.GetItemPrefab(itemHash);
             if (itemPrefab == null)
             {
-                LogWarning("Missing item prefab " + itemName);
+                LogWarning("Missing item prefab " + itemHash);
                 return;
             }
 
+            string itemName = itemPrefab.name;
+            m_guardianPower = trophyEffects.TryGetValue(itemName, out SE_Stats gpower) ? gpower : null;
             GameObject attachPrefab = GetAttachPrefab(itemPrefab);
             if (attachPrefab == null)
             {
@@ -371,17 +394,35 @@ namespace LongshipUpgrades
             if (onlyCreatorStand.Value && m_piece != null && !m_piece.IsCreator())
                 return false;
 
-            return GetAttachPrefab(item.m_dropPrefab) != null && item.m_shared.m_itemType == supportedItemType;
+            return item != null && item.m_dropPrefab != null && GetAttachPrefab(item.m_dropPrefab) != null &&
+                item.m_shared.m_itemType == supportedItemType;
         }
 
         public bool HaveAttachment()
         {
-            return GetAttachedItem() != "";
+            return GetAttachedItem() != 0;
         }
 
-        public string GetAttachedItem()
+        public int GetAttachedItem()
         {
-            return m_nview.IsValid() ? m_nview.GetZDO().GetString(ZDOVars.s_item) : "";
+            if (m_nview == null || !m_nview.IsValid())
+                return 0;
+
+            ZDO zdo = m_nview.GetZDO();
+            int itemHash = zdo.GetInt(ZDOVars.s_item);
+            if (itemHash != 0)
+                return itemHash;
+
+            // Custom stands saved before 1.0.7 can still contain a prefab name.
+            string itemName = zdo.GetString(ZDOVars.s_item);
+            return string.IsNullOrEmpty(itemName) ? 0 : itemName.GetStableHashCode();
+        }
+
+        private void SetAttachedItem(int itemHash)
+        {
+            ZDO zdo = m_nview.GetZDO();
+            zdo.RemoveString(ZDOVars.s_item);
+            zdo.Set(ZDOVars.s_item, itemHash);
         }
 
         internal static bool TryFindScaleOverride(string itemName, out float scale)

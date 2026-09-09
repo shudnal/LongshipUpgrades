@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -1289,8 +1289,8 @@ namespace LongshipUpgrades
                 ShipTurret.m_lostTargetEffect = original.m_lostTargetEffect;
                 ShipTurret.m_setTargetEffect = original.m_setTargetEffect;
 
-                turret_right.AddComponent<ShipTurret>().SetPositionAtShip(isLeft: false).FillAllowedAmmo(original.m_allowedAmmo).m_destroyedLootPrefab = m_destroyedLootPrefab;
-                turret_left.AddComponent<ShipTurret>().SetPositionAtShip(isLeft: true).FillAllowedAmmo(original.m_allowedAmmo).m_destroyedLootPrefab = m_destroyedLootPrefab;
+                turret_right.AddComponent<ShipTurret>().SetPositionAtShip(isLeft: false).FillAllowedAmmo(original.m_allowedAmmo).FillTrophyTargets(original.m_configTargets).m_destroyedLootPrefab = m_destroyedLootPrefab;
+                turret_left.AddComponent<ShipTurret>().SetPositionAtShip(isLeft: true).FillAllowedAmmo(original.m_allowedAmmo).FillTrophyTargets(original.m_configTargets).m_destroyedLootPrefab = m_destroyedLootPrefab;
             }
 
             s_standBossDragonPrefab ??= Resources.FindObjectsOfTypeAll<ItemStand>().FirstOrDefault(ws => ws.transform.root.gameObject.name == moderBossStone)?.gameObject;
@@ -1479,8 +1479,7 @@ namespace LongshipUpgrades
             if (!m_trophyStand.HaveAttachment())
                 return;
 
-            string @string = m_trophyStand.m_nview.GetZDO().GetString(ZDOVars.s_item);
-            GameObject itemPrefab = ObjectDB.instance.GetItemPrefab(@string);
+            GameObject itemPrefab = ObjectDB.instance.GetItemPrefab(m_trophyStand.GetAttachedItem());
             if ((bool)itemPrefab)
             {
                 Vector3 vector = Vector3.zero;

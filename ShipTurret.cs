@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 using static LongshipUpgrades.LongshipUpgrades;
@@ -111,6 +112,8 @@ namespace LongshipUpgrades
 
         public bool m_isLeftTurret;
 
+        public float m_hoverOffset;
+
         public static readonly int s_lastAttackLeft = "lastAttackLeft".GetStableHashCode();
         public static readonly int s_lastAttackRight = "lastAttackRight".GetStableHashCode();
         public static readonly int s_targetsLeft = "targetsLeft".GetStableHashCode();
@@ -165,6 +168,24 @@ namespace LongshipUpgrades
 
             if (m_nview && m_nview.IsValid())
                 UpdateVisualBolt();
+
+            return this;
+        }
+
+        public ShipTurret FillTrophyTargets(List<Turret.TrophyTarget> trophyTargets)
+        {
+            foreach (Turret.TrophyTarget configTarget in trophyTargets)
+            {
+                m_configTargets.Add(new Turret.TrophyTarget()
+                {
+                    m_nameOverride = configTarget.m_nameOverride,
+                    m_item = configTarget.m_item,
+                    m_targets = configTarget.m_targets.ToList()
+                });
+            }
+
+            if (m_nview && m_nview.IsValid())
+                SetTargets();
 
             return this;
         }
@@ -496,6 +517,11 @@ namespace LongshipUpgrades
         public string GetHoverName()
         {
             return m_name;
+        }
+
+        public float GetHoverOffset()
+        {
+            return m_hoverOffset;
         }
 
         public bool Interact(Humanoid character, bool hold, bool alt)

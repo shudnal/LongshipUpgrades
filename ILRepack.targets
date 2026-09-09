@@ -18,11 +18,8 @@
       <LongshipUpgradesThunderstorePackageDir>$(MSBuildProjectDirectory)\package\thunderstore\$(LongshipUpgradesPackageName)\</LongshipUpgradesThunderstorePackageDir>
       <LongshipUpgradesThunderstoreZipPath>$(MSBuildProjectDirectory)\package\thunderstore\$(LongshipUpgradesPackageName).zip</LongshipUpgradesThunderstoreZipPath>
       <LongshipUpgradesThunderstoreManifestPath>$(LongshipUpgradesThunderstorePackageDir)manifest.json</LongshipUpgradesThunderstoreManifestPath>
-      <LongshipUpgradesNexusPackageDir>$(MSBuildProjectDirectory)\package\nexus\$(LongshipUpgradesPackageName)\</LongshipUpgradesNexusPackageDir>
-      <LongshipUpgradesNexusZipPath>$(MSBuildProjectDirectory)\package\nexus\$(LongshipUpgradesPackageName).zip</LongshipUpgradesNexusZipPath>
       <LongshipUpgradesEnglishLocalizationSource>$(MSBuildProjectDirectory)\translations\English.json</LongshipUpgradesEnglishLocalizationSource>
       <LongshipUpgradesEnglishLocalizationFileName>Longship Upgrades.English.json</LongshipUpgradesEnglishLocalizationFileName>
-      <LongshipUpgradesYamlDotNetPath>$(TargetDir)YamlDotNet.dll</LongshipUpgradesYamlDotNetPath>
     </PropertyGroup>
   </Target>
 
@@ -50,17 +47,5 @@
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ResolvedLongshipUpgradesR2ModManProfilePluginsDir)" OverwriteReadOnlyFiles="true" />
     <Message Text="Copied LongshipUpgrades.dll to r2modman profile: $(ResolvedLongshipUpgradesR2ModManProfilePluginsDir)" Importance="High" />
 
-    <Error Condition="!Exists('$(LongshipUpgradesYamlDotNetPath)')" Text="YamlDotNet.dll was not found for the Nexus ILRepack step: $(LongshipUpgradesYamlDotNetPath)" />
-    <MakeDir Directories="$(LongshipUpgradesNexusPackageDir)" />
-    <ItemGroup>
-      <LongshipUpgradesNexusInputAssemblies Include="$(TargetPath)" />
-      <LongshipUpgradesNexusInputAssemblies Include="$(LongshipUpgradesYamlDotNetPath)" />
-    </ItemGroup>
-    <ILRepack Parallel="true" DebugInfo="true" Internalize="true" InputAssemblies="@(LongshipUpgradesNexusInputAssemblies)" OutputFile="$(LongshipUpgradesNexusPackageDir)$(TargetFileName)" TargetKind="SameAsPrimaryAssembly" LibraryPath="$(TargetDir)" />
-
-    <Copy SourceFiles="$(LongshipUpgradesEnglishLocalizationSource)" DestinationFiles="$(LongshipUpgradesNexusPackageDir)$(LongshipUpgradesEnglishLocalizationFileName)" OverwriteReadOnlyFiles="true" />
-    <ZipDirectory SourceDirectory="$(LongshipUpgradesNexusPackageDir)" DestinationFile="$(LongshipUpgradesNexusZipPath)" Overwrite="true" />
-    <Message Text="Copied repacked DLL to Nexus package folder." Importance="High" />
-    <Message Text="Nexus archive created: $(LongshipUpgradesNexusZipPath)" Importance="High" />
   </Target>
 </Project>

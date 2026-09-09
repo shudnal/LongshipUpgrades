@@ -1,3 +1,13 @@
+# 1.0.18
+* Updated for the Valheim 1.0.7 release.
+* Updated required dependencies to BepInExPack Valheim 5.4.2350 and ConditionalConfigSync 1.0.5.
+* Restored ship map-data indexes when loading worlds saved in the new chunk format.
+* Updated trophy attachments to integer prefab hashes while retaining support for saved legacy names.
+* Refreshed trophy visuals when quality changes, preserved quality/variant metadata, and prevented duplicate visual objects.
+* Kept attached trophy data intact when the item prefab cannot be found, and guarded null item references.
+* Fixed compressed ship-map context for both explicit reads and the read performed before writing to the map table.
+* Restored temporary map serialization and effect state after exceptional exits.
+
 # 1.0.17
 * enabled strict ModRequired admission: Longship Upgrades must now be installed on the server and every connecting client because ship component changes and map-data synchronization use mod-specific RPCs
 * migrated configuration synchronization from ServerSync to ConditionalConfigSync
