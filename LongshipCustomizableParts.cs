@@ -1163,6 +1163,8 @@ namespace LongshipUpgrades
             Transform unused = customize.parent.Find("unused");
             if (unused)
             {
+                Material skullMaterial = m_wnt?.m_new?.transform?.Find("skull_head")?.GetComponent<MeshRenderer>().sharedMaterial;
+
                 GameObject heads = new GameObject("heads");
 
                 Transform headsParent = heads.transform;
@@ -1175,6 +1177,7 @@ namespace LongshipUpgrades
                 {
                     GameObject head = Instantiate(carnyx_head.gameObject, headsParent, worldPositionStays: true);
                     head.name = carnyx_head.name;
+                    head.GetComponent<MeshRenderer>().sharedMaterial = skullMaterial;
                     head.SetActive(false);
                     
                     headsObjects.Add(head);
@@ -1185,6 +1188,7 @@ namespace LongshipUpgrades
                 {
                     GameObject head = Instantiate(dragon_head.gameObject, headsParent, worldPositionStays: true);
                     head.name = dragon_head.name;
+                    head.GetComponent<MeshRenderer>().sharedMaterial = skullMaterial;
                     head.SetActive(false);
 
                     headsObjects.Add(head);
@@ -1195,6 +1199,7 @@ namespace LongshipUpgrades
                 {
                     GameObject head = Instantiate(oseberg_head.gameObject, headsParent, worldPositionStays: true);
                     head.name = oseberg_head.name;
+                    head.GetComponent<MeshRenderer>().sharedMaterial = skullMaterial;
                     head.SetActive(false);
 
                     head.transform.localPosition = Vector3.zero;

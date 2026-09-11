@@ -1,3 +1,6 @@
+# 1.0.19
+* fixed pink alternative heads
+
 # 1.0.18
 * Updated for the Valheim 1.0.7 release.
 * Updated required dependencies to BepInExPack Valheim 5.4.2350 and ConditionalConfigSync 1.0.5.
