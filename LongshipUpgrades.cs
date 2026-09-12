@@ -18,7 +18,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.19";
+        public const string pluginVersion = "1.0.20";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 

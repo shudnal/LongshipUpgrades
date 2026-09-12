@@ -1,3 +1,6 @@
+# 1.0.20
+* fixed sail not changing
+
 # 1.0.19
 * fixed pink alternative heads
 

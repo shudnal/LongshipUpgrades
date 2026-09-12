@@ -678,7 +678,7 @@ namespace LongshipUpgrades
         {
             m_mast = transform.Find("ship/visual/Mast")?.gameObject;
             m_ropes = transform.Find("ship/visual/ropes")?.gameObject;
-            m_sail = transform.Find("ship/visual/Mast/Sail/sail_full")?.gameObject;
+            m_sail = transform.Find("ship/visual/Mast/Karve_Sail/Karve_Sail")?.gameObject;
 
             Transform customize = transform.Find("ship/visual/Customize");
             if (!customize)
