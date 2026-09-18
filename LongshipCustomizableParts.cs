@@ -902,7 +902,8 @@ namespace LongshipUpgrades
                     }
             }
 
-            s_lanternPrefab ??= ObjectDB.instance.GetItemPrefab("Lantern")?.transform.Find("attach/equiped")?.gameObject;
+            if (s_lanternPrefab == null)
+                s_lanternPrefab = PrefabAudio.Clone(ObjectDB.instance.GetItemPrefab("Lantern")?.transform.Find("attach/equiped")?.gameObject);
             if (s_lanternPrefab)
             {
                 m_lantern = new GameObject("Lantern")
@@ -1606,6 +1607,8 @@ namespace LongshipUpgrades
         {
             shaderStandard = null;
 
+            PrefabAudio.Clear();
+            partEffects.m_effectPrefabs = Array.Empty<EffectList.EffectData>();
             s_lanternPrefab = null;
             s_turretPrefab = null;
             s_standBossDragonPrefab = null;
@@ -1745,7 +1748,7 @@ namespace LongshipUpgrades
 
             void AddEffect(int variant, string prefabName)
             {
-                GameObject prefab = ZNetScene.instance.GetPrefab(prefabName);
+                GameObject prefab = PrefabAudio.Clone(ZNetScene.instance.GetPrefab(prefabName));
                 effectPrefabs.Insert(variant, new EffectList.EffectData { m_prefab = prefab, m_enabled = prefab != null, m_variant = variant });
             }
         }

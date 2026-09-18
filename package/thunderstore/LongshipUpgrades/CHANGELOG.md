@@ -1,3 +1,6 @@
+# 1.0.21
+* Routed the ship lantern and part-switch sounds through the game's volume controls without changing shared vanilla effects.
+
 # 1.0.20
 * fixed sail not changing
 
