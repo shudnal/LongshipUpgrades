@@ -5,6 +5,8 @@ Ever wanted your most used through the game ship to be even more useful? And not
 
 This mod is fully compatible with vanilla Longship. You won't lose it after disabling the mod. Except maybe extra storage but anyway destroying ship will create a crates with that extra stored items.
 
+**Before disabling or uninstalling Longship Upgrades, disable ship map tables and complete a successful world save. See [Safe removal](#safely-disabling-or-uninstalling-the-mod).**
+
 Every mentioned upgrade is highly customizable.
 
 ## Multiplayer requirement
@@ -126,9 +128,28 @@ Setting `[Map table] Enable upgrades = false` permanently clears recorded map da
 
 The cleanup preserves the purchased table upgrade, other ship upgrades, cargo, each player's own exploration, and land-based cartography tables. Re-enabling the setting restores the table, but its recorded map starts empty. Players can record their maps again.
 
-Cleanup runs on the next main-thread update and when ship data is loaded or received. A world save started after cleanup persists the deletion. A save that had already captured its snapshot is not rewritten in place; another successful save is required before stopping the server. Late map messages are ignored while the table is disabled.
+Cleanup runs on the next main-thread update and when ship data is loaded or received. While the table is disabled, the server also checks every longship again before each world save, regardless of whether the setting changed since the previous save. This pass removes any remaining map payload and its format/revision metadata, clears the map cache, and marks affected chunks for saving before the game's snapshot is captured. It does not require the ships to be loaded in the scene or their map-format flag to be present. Clean ships are not marked dirty again, and disabled maps are never injected into the save.
+
+A world save started after disabling the table persists the deletion. A save that had already captured its snapshot is not rewritten in place; another successful save is required before stopping the server. Late map messages are ignored while the table is disabled.
 
 For save diagnostics, temporarily enable `[General] Logging enabled`. The log separates ship-map injection time and payload size from the total `ZDOMan.PrepareSave` scope, which also includes the game and other mods. Custom save implementations that bypass or defer the vanilla snapshot require separate verification; these diagnostics do not certify their compatibility.
+
+### Safely disabling or uninstalling the mod
+
+Do not disable or remove Longship Upgrades before clearing the recorded ship maps. Without the mod's network filtering, map payloads left in saved ship ZDOs can be sent with ordinary ship updates and cause excessive network traffic for nearby players. Keep a world backup before cleanup: the recorded ship maps will be deleted.
+
+1. Keep Longship Upgrades installed on the server or host and all connecting clients. In the server or host's `BepInEx/config/shudnal.LongshipUpgrades.cfg`, set the map-table option to:
+   ```ini
+   [Map table]
+   Enable upgrades = false
+   ```
+   Apply the setting on the server or host, not only on a remote client. When editing the file with the server stopped, start the world with Longship Upgrades still installed so cleanup can run.
+2. With the setting disabled, start a new world save and wait for it to finish successfully. An earlier save or a failed save is not sufficient. The server cleans all longships in the world, including unloaded ships; there is no need to visit them. A cleanup log message alone does not confirm that the world save has reached disk.
+3. Stop the server or game, then disable or uninstall Longship Upgrades on the server and clients before restarting without it.
+
+This procedure deletes recorded ship maps and their map metadata, not the ships, cargo, other upgrade data, players' personal exploration, or land-based cartography tables. It does not reset all ship upgrades. If you later re-enable ship map tables, players must record their maps again.
+
+Repeat this procedure for each world from which you are removing the mod. Restoring an older world backup can restore the map payloads, so clean and save that world again before running it without Longship Upgrades. If the mod has already been removed, reinstall it on the server or host and the connecting clients, then follow the steps above.
 
 ## Localization
 To add your own localization create a file with the name **Longship Upgrades.LanguageName.yml** or **Longship Upgrades.LanguageName.json** anywhere inside of the Bepinex folder. For example, to add a French translation you could create a **Longship Upgrades.French.yml** file inside of the config folder and add French translations there.

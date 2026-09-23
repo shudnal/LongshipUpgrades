@@ -18,7 +18,7 @@ namespace LongshipUpgrades
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.23";
+        public const string pluginVersion = "1.0.22";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -226,7 +226,7 @@ namespace LongshipUpgrades
             itemStandTrophyRescale = config("Item stand", "Trophy rescale", defaultValue: "TrophyBonemass:0,7;TrophyBonemawSerpent:0,7;TrophySeekerQueen:0,7;TrophyGoblinKing:0,7", "Some trophies are ginormous. Set smaller scale for them. Trophy rehook required to apply changes.");
             itemStandForsakenPower = serverConfig("Item stand", "Forsaken power enabled", defaultValue: true, "Boss trophies brings an option to cast another Forsaken power while on ship.");
 
-            mapTableEnabled = serverConfig("Map table", "Enable upgrades", defaultValue: true, "Cartography table allows to exchange map data between players. Disabling this permanently clears recorded map data from all longships, including unloaded ships. Ship upgrades, cargo, personal exploration and land-based map tables are not affected. The deletion is persisted by the next world save started after cleanup.");
+            mapTableEnabled = serverConfig("Map table", "Enable upgrades", defaultValue: true, "Cartography table allows to exchange map data between players. Disabling this permanently clears recorded map data from all longships, including unloaded ships. Ship upgrades, cargo, personal exploration and land-based map tables are not affected. The server checks for remaining map data before every world save while this setting is disabled. Before disabling or uninstalling Longship Upgrades, disable this setting, complete a successful world save, then stop the server or game and remove the mod.");
             mapTableEnabled.SettingChanged += (sender, args) => RequestShipMapConfigurationUpdate();
             mapTableUpgradeRecipe = serverConfig("Map table", "Recipe", defaultValue: "FineWood:10,Bronze:2,LeatherScraps:5,Raspberry:4", "Map Table upgrade recipe. Item identifiers accept prefab names or localization tokens without case sensitivity. World restart or ship rebuild required to apply changes.");
             mapTableStation = serverConfig("Map table", "Station name", defaultValue: "$piece_forge", "Station localization token or prefab name. Matching is case-insensitive. The center of the ship is the starting point of the check.");
@@ -860,10 +860,16 @@ namespace LongshipUpgrades
         [HarmonyPatch(typeof(ZDOMan), nameof(ZDOMan.PrepareSave))]
         public static class ZDOMan_PrepareSave_InjectShipMapData
         {
+            [HarmonyPriority(Priority.First)]
             public static void Prefix(ref ShipMapSaveState __state)
             {
-                ApplyShipMapConfiguration();
-                if (!ShipMapsEnabled || ZNet.instance == null || !ZNet.instance.IsServer())
+                if (ZNet.instance == null || !ZNet.instance.IsServer())
+                    return;
+
+                // Purge disabled maps before the game selects dirty chunks and captures ZDOs.
+                // This must not depend on a pending configuration-change notification.
+                ApplyShipMapConfiguration(beforeSave: true);
+                if (!ShipMapsEnabled)
                     return;
 
                 // Assign state before injecting so a partial failure can still be cleaned up.

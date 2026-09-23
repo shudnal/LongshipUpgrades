@@ -18,11 +18,14 @@ namespace LongshipUpgrades
             Interlocked.Exchange(ref s_shipMapConfigurationUpdateRequested, 1);
         }
 
-        private static void ApplyShipMapConfiguration()
+        private static void ApplyShipMapConfiguration(bool beforeSave = false)
         {
             if (mapTableEnabled == null || ZNet.instance == null || ZDOMan.instance == null)
                 return;
-            if (Interlocked.Exchange(ref s_shipMapConfigurationUpdateRequested, 0) == 0 || ShipMapsEnabled)
+            bool updateRequested = Interlocked.Exchange(ref s_shipMapConfigurationUpdateRequested, 0) != 0;
+            // A previous update may already have consumed the setting-change notification.
+            // Recheck every ship before each server save, even when no notification is pending.
+            if ((!beforeSave && !updateRequested) || ShipMapsEnabled)
                 return;
 
             int clearedShips = 0;
@@ -44,7 +47,10 @@ namespace LongshipUpgrades
                 RequestShipMapConfigurationUpdate();
                 throw;
             }
-            LogInfo($"Ship map tables are disabled: cleared recorded map data from {clearedShips} ship(s). Changes will be persisted by the next world save started after cleanup.");
+            if (beforeSave)
+                LogInfo($"Ship map tables are disabled: pre-save cleanup removed recorded map data from {clearedShips} ship(s). No cached maps will be injected. Wait for this world save to finish successfully before disabling or uninstalling Longship Upgrades.");
+            else
+                LogInfo($"Ship map tables are disabled: cleared recorded map data from {clearedShips} ship(s). Changes will be persisted by the next world save started after cleanup.");
         }
 
         private static bool PurgeShipMapData(ZDO zdo)
