@@ -108,6 +108,17 @@ You will need to rename the files you copy because all of them has the same name
 
 Voila.
 
+
+## Disabling ship map tables
+
+Setting `[Map table] Enable upgrades = false` permanently clears recorded map data from every longship known to the server, including ships outside the loaded scene. Disable the setting on the server (or in the host's configuration) to apply it authoritatively. Keep a world backup before disabling it if the recorded maps may be needed again.
+
+The cleanup preserves the purchased table upgrade, other ship upgrades, cargo, each player's own exploration, and land-based cartography tables. Re-enabling the setting restores the table, but its recorded map starts empty. Players can record their maps again.
+
+Cleanup runs on the next main-thread update and when ship data is loaded or received. A world save started after cleanup persists the deletion. A save that had already captured its snapshot is not rewritten in place; another successful save is required before stopping the server. Late map messages are ignored while the table is disabled.
+
+For save diagnostics, temporarily enable `[General] Logging enabled`. The log separates ship-map injection time and payload size from the total `ZDOMan.PrepareSave` scope, which also includes the game and other mods. Custom save implementations that bypass or defer the vanilla snapshot require separate verification; these diagnostics do not certify their compatibility.
+
 ## Localization
 To add your own localization create a file with the name **Longship Upgrades.LanguageName.yml** or **Longship Upgrades.LanguageName.json** anywhere inside of the Bepinex folder. For example, to add a French translation you could create a **Longship Upgrades.French.yml** file inside of the config folder and add French translations there.
 

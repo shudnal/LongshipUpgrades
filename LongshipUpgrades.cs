@@ -14,11 +14,11 @@ namespace LongshipUpgrades
 {
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
     [BepInDependency("_shudnal.ConditionalConfigSync", "1.0.5")]
-    public class LongshipUpgrades : BaseUnityPlugin
+    public partial class LongshipUpgrades : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.LongshipUpgrades";
         public const string pluginName = "Longship Upgrades";
-        public const string pluginVersion = "1.0.22";
+        public const string pluginVersion = "1.0.23";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -226,7 +226,8 @@ namespace LongshipUpgrades
             itemStandTrophyRescale = config("Item stand", "Trophy rescale", defaultValue: "TrophyBonemass:0,7;TrophyBonemawSerpent:0,7;TrophySeekerQueen:0,7;TrophyGoblinKing:0,7", "Some trophies are ginormous. Set smaller scale for them. Trophy rehook required to apply changes.");
             itemStandForsakenPower = serverConfig("Item stand", "Forsaken power enabled", defaultValue: true, "Boss trophies brings an option to cast another Forsaken power while on ship.");
 
-            mapTableEnabled = serverConfig("Map table", "Enable upgrades", defaultValue: true, "Cartography table allows to exchange map data between players.");
+            mapTableEnabled = serverConfig("Map table", "Enable upgrades", defaultValue: true, "Cartography table allows to exchange map data between players. Disabling this permanently clears recorded map data from all longships, including unloaded ships. Ship upgrades, cargo, personal exploration and land-based map tables are not affected. The deletion is persisted by the next world save started after cleanup.");
+            mapTableEnabled.SettingChanged += (sender, args) => RequestShipMapConfigurationUpdate();
             mapTableUpgradeRecipe = serverConfig("Map table", "Recipe", defaultValue: "FineWood:10,Bronze:2,LeatherScraps:5,Raspberry:4", "Map Table upgrade recipe. Item identifiers accept prefab names or localization tokens without case sensitivity. World restart or ship rebuild required to apply changes.");
             mapTableStation = serverConfig("Map table", "Station name", defaultValue: "$piece_forge", "Station localization token or prefab name. Matching is case-insensitive. The center of the ship is the starting point of the check.");
             mapTableStationLvl = serverConfig("Map table", "Station level", defaultValue: 3, "Station level. At least one station in the range must meet the level requirement.");
@@ -512,7 +513,6 @@ namespace LongshipUpgrades
         private const string shipMapSubmitRpc = "LU_SubmitShipMapData";
         private static readonly Dictionary<ZDOID, ShipMapDataEntry> s_shipMapStore = new Dictionary<ZDOID, ShipMapDataEntry>();
         private static readonly HashSet<ZDOID> s_trackedShipZdos = new HashSet<ZDOID>();
-        private static readonly List<ZDOID> s_saveInjectedShipMapZdos = new List<ZDOID>();
         private static bool s_shipMapRpcsRegistered = false;
         private static float s_nextClientShipMapPruneTime = 0f;
 
@@ -549,7 +549,7 @@ namespace LongshipUpgrades
 
         internal static bool TryGetShipMapData(ZDOID id, out ShipMapDataEntry entry)
         {
-            if (s_shipMapStore.TryGetValue(id, out entry) && entry != null && entry.Data != null)
+            if (ShipMapsEnabled && s_shipMapStore.TryGetValue(id, out entry) && entry != null && entry.Data != null)
             {
                 entry.LastAccessTime = Time.time;
                 return true;
@@ -561,20 +561,19 @@ namespace LongshipUpgrades
 
         internal static int GetShipMapRevision(ZDOID id)
         {
-            return s_shipMapStore.TryGetValue(id, out ShipMapDataEntry entry) ? entry.Revision : 0;
+            return ShipMapsEnabled && s_shipMapStore.TryGetValue(id, out ShipMapDataEntry entry) ? entry.Revision : 0;
         }
 
         internal static int SyncShipMapRevision(ZDO zdo, int? preferredRevision = null)
         {
-            if (!IsShipZdo(zdo))
+            if (!ShipMapsEnabled || !IsShipZdo(zdo))
                 return 0;
 
             int revision = preferredRevision ?? Math.Max(zdo.GetInt(s_shipMapDataRevision), GetShipMapRevision(zdo.m_uid));
             if (revision <= 0)
                 revision = 1;
 
-            if (zdo.GetInt(s_shipMapDataRevision) != revision)
-                zdo.Set(s_shipMapDataRevision, revision);
+            SetShipMapInt(zdo, s_shipMapDataRevision, revision);
 
             if (s_shipMapStore.TryGetValue(zdo.m_uid, out ShipMapDataEntry entry))
                 entry.Revision = Math.Max(entry.Revision, revision);
@@ -584,22 +583,15 @@ namespace LongshipUpgrades
 
         private static bool RemoveShipMapDataFromRuntime(ZDOID id)
         {
-            if (!ZDOExtraData.s_byteArrays.TryGetValue(id, out BinarySearchDictionary<int, byte[]> byteArrays))
-                return false;
-
-            bool removed = byteArrays.Remove(ZDOVars.s_data);
-            if (removed && byteArrays.Count == 0)
-                ZDOExtraData.s_byteArrays.Remove(id);
-
-            return removed;
+            return RemoveDetachedZdoField(ZDOExtraData.s_byteArrays, id, ZDOVars.s_data);
         }
 
         internal static bool InjectShipMapDataIntoZdo(ZDO zdo)
         {
-            if (!IsShipZdo(zdo) || !TryGetShipMapData(zdo.m_uid, out ShipMapDataEntry entry))
+            if (!ShipMapsEnabled || !IsShipZdo(zdo) || !TryGetShipMapData(zdo.m_uid, out ShipMapDataEntry entry))
                 return false;
 
-            ZDOExtraData.Set(zdo.m_uid, ZDOVars.s_data, entry.Data);
+            SetShipMapDataInRuntime(zdo.m_uid, entry.Data);
             return true;
         }
 
@@ -607,6 +599,12 @@ namespace LongshipUpgrades
         {
             if (!IsShipZdo(zdo))
                 return false;
+
+            if (!ShipMapsEnabled)
+            {
+                PurgeShipMapData(zdo);
+                return false;
+            }
 
             byte[] data = zdo.GetByteArray(ZDOVars.s_data);
             if (data == null)
@@ -623,7 +621,11 @@ namespace LongshipUpgrades
 
         internal static bool SetShipMapData(ZDOID id, int revision, byte[] data)
         {
-            if (data == null || revision <= 0)
+            if (!ShipMapsEnabled || data == null || revision <= 0)
+                return false;
+
+            // Reject an obsolete upload before copying or hashing its potentially large payload.
+            if (s_shipMapStore.TryGetValue(id, out ShipMapDataEntry previous) && revision < previous.Revision)
                 return false;
 
             byte[] copy = (byte[])data.Clone();
@@ -667,7 +669,7 @@ namespace LongshipUpgrades
         {
             s_shipMapStore.Clear();
             s_trackedShipZdos.Clear();
-            s_saveInjectedShipMapZdos.Clear();
+            RequestShipMapConfigurationUpdate();
             s_shipMapRpcsRegistered = false;
             s_nextClientShipMapPruneTime = 0f;
 
@@ -689,11 +691,15 @@ namespace LongshipUpgrades
             s_trackedShipZdos.Clear();
             foreach (ZDO zdo in zdos)
                 TrackShipZdo(zdo, extractFromRuntime: true);
+
+            if (!ShipMapsEnabled)
+                s_shipMapStore.Clear();
+            RequestShipMapConfigurationUpdate();
         }
 
         internal static bool RequestShipMapDataFromServer(ZDO zdo, int currentRevision)
         {
-            if (zdo == null || !zdo.IsValid() || currentRevision <= 0 || ZRoutedRpc.instance == null)
+            if (!ShipMapsEnabled || !IsShipZdo(zdo) || !zdo.IsValid() || currentRevision <= 0 || ZRoutedRpc.instance == null || ZNet.instance == null || ZNet.instance.IsServer())
                 return false;
 
             ZPackage pkg = new ZPackage();
@@ -706,7 +712,7 @@ namespace LongshipUpgrades
 
         private static void SubmitShipMapDataToServer(ZDO zdo, int revision, byte[] data)
         {
-            if (zdo == null || revision <= 0 || data == null || ZRoutedRpc.instance == null || (ZNet.instance != null && ZNet.instance.IsServer()))
+            if (!ShipMapsEnabled || !IsShipZdo(zdo) || revision <= 0 || data == null || ZRoutedRpc.instance == null || (ZNet.instance != null && ZNet.instance.IsServer()))
                 return;
 
             ZPackage pkg = new ZPackage();
@@ -715,24 +721,6 @@ namespace LongshipUpgrades
             pkg.Write(data);
             ZRoutedRpc.instance.InvokeRoutedRPC(shipMapSubmitRpc, pkg);
             LogInfo($"Ship map data submitted to server for {zdo}");
-        }
-
-        private static void InjectAllTrackedShipMapDataIntoRuntime()
-        {
-            s_saveInjectedShipMapZdos.Clear();
-            foreach (ZDOID id in s_shipMapStore.Keys.ToList())
-            {
-                ZDO zdo = ZDOMan.instance?.GetZDO(id);
-                if (zdo != null && InjectShipMapDataIntoZdo(zdo))
-                    s_saveInjectedShipMapZdos.Add(id);
-            }
-        }
-
-        private static void RemoveInjectedShipMapDataFromRuntime()
-        {
-            foreach (ZDOID id in s_saveInjectedShipMapZdos)
-                RemoveShipMapDataFromRuntime(id);
-            s_saveInjectedShipMapZdos.Clear();
         }
 
         private static void PruneClientShipMapStore()
@@ -753,12 +741,12 @@ namespace LongshipUpgrades
 
         private static void RPC_RequestShipMapData(long sender, ZPackage pkg)
         {
-            if (ZNet.instance == null || !ZNet.instance.IsServer() || pkg == null)
+            if (!ShipMapsEnabled || ZNet.instance == null || !ZNet.instance.IsServer() || pkg == null)
                 return;
 
             ZDOID id = pkg.ReadZDOID();
             int requestedRevision = pkg.ReadInt();
-            if (!TryGetShipMapData(id, out ShipMapDataEntry entry) || entry.Revision < requestedRevision)
+            if (!IsShipZdo(id) || requestedRevision <= 0 || !TryGetShipMapData(id, out ShipMapDataEntry entry) || entry.Revision < requestedRevision)
                 return;
 
             ZPackage response = new ZPackage();
@@ -771,16 +759,17 @@ namespace LongshipUpgrades
 
         private static void RPC_ShipMapDataResponse(long sender, ZPackage pkg)
         {
-            if (ZNet.instance == null || ZNet.instance.IsServer() || pkg == null)
+            if (!ShipMapsEnabled || ZNet.instance == null || ZNet.instance.IsServer() || pkg == null)
                 return;
 
             ZDOID id = pkg.ReadZDOID();
             int revision = pkg.ReadInt();
-            byte[] data = pkg.ReadByteArray();
-            if (data == null)
+            ZDO zdo = ZDOMan.instance?.GetZDO(id);
+            if (!IsShipZdo(zdo) || !zdo.GetBool(LongshipCustomizableParts.s_mapDataCompressed) || revision <= GetShipMapRevision(id))
                 return;
 
-            if (revision <= GetShipMapRevision(id))
+            byte[] data = pkg.ReadByteArray();
+            if (data == null)
                 return;
 
             SetShipMapData(id, revision, data);
@@ -789,26 +778,28 @@ namespace LongshipUpgrades
 
         private static void RPC_SubmitShipMapData(long sender, ZPackage pkg)
         {
-            if (ZNet.instance == null || !ZNet.instance.IsServer() || pkg == null)
+            if (!ShipMapsEnabled || ZNet.instance == null || !ZNet.instance.IsServer() || pkg == null)
                 return;
 
             ZDOID id = pkg.ReadZDOID();
             int revision = pkg.ReadInt();
-            byte[] data = pkg.ReadByteArray();
-            if (data == null || revision <= 0)
-                return;
-
-            if (!SetShipMapData(id, revision, data))
-                return;
-
             ZDO zdo = ZDOMan.instance?.GetZDO(id);
+            if ((zdo != null && !IsShipZdo(zdo)) || revision <= 0 || revision < GetShipMapRevision(id))
+                return;
+
+            byte[] data = pkg.ReadByteArray();
+            if (data == null || !SetShipMapData(id, revision, data))
+                return;
+
+            // Routed map data may arrive before the ship's first ZDO packet. Keep that
+            // payload pending, but never attach it to an existing non-ship object.
             if (zdo != null)
             {
-                if (!zdo.GetBool(LongshipCustomizableParts.s_mapDataCompressed))
-                    zdo.Set(LongshipCustomizableParts.s_mapDataCompressed, true);
-
+                SetShipMapInt(zdo, LongshipCustomizableParts.s_mapDataCompressed, 1);
                 SyncShipMapRevision(zdo, revision);
-
+                // The metadata revision may have arrived (and been saved) before the
+                // payload. A cache-only change must still be included in the next save.
+                ZDOMan.instance.SetDirtySector(zdo);
                 RemoveShipMapDataFromRuntime(id);
             }
 
@@ -869,21 +860,41 @@ namespace LongshipUpgrades
         [HarmonyPatch(typeof(ZDOMan), nameof(ZDOMan.PrepareSave))]
         public static class ZDOMan_PrepareSave_InjectShipMapData
         {
-            public static void Prefix()
+            public static void Prefix(ref ShipMapSaveState __state)
             {
-                if (ZNet.instance != null && ZNet.instance.IsServer())
-                    InjectAllTrackedShipMapDataIntoRuntime();
+                ApplyShipMapConfiguration();
+                if (!ShipMapsEnabled || ZNet.instance == null || !ZNet.instance.IsServer())
+                    return;
+
+                // Assign state before injecting so a partial failure can still be cleaned up.
+                __state = new ShipMapSaveState();
+                InjectShipMapDataForSave(__state);
             }
 
-            public static void Postfix()
+            public static Exception Finalizer(ShipMapSaveState __state, Exception __exception)
             {
-                RemoveInjectedShipMapDataFromRuntime();
+                try
+                {
+                    RemoveShipMapSaveInjection(__state);
+                }
+                catch (Exception cleanupException)
+                {
+                    LogWarning($"Ship map save cleanup failed: {cleanupException}");
+                    return __exception ?? cleanupException;
+                }
+
+                return __exception;
             }
         }
 
         [HarmonyPatch(typeof(ZDOMan), nameof(ZDOMan.Update))]
         public static class ZDOMan_Update_PruneClientShipMapStore
         {
+            public static void Prefix()
+            {
+                ApplyShipMapConfiguration();
+            }
+
             public static void Postfix()
             {
                 PruneClientShipMapStore();
@@ -999,16 +1010,20 @@ namespace LongshipUpgrades
         [HarmonyPatch(typeof(MapTable), nameof(MapTable.OnRead), new Type[] { typeof(Switch), typeof(Humanoid), typeof(ItemDrop.ItemData), typeof(bool) })]
         public static class MapTable_OnRead_TrackCompressionContext
         {
-            public static void Prefix(MapTable __instance, ref bool __state)
+            public static bool Prefix(MapTable __instance, ref bool __state)
             {
-                __state = IsShipMapTable(__instance);
-                if (!__state)
-                    return;
+                __state = false;
+                if (!IsShipMapTable(__instance))
+                    return true;
+                if (!ShipMapsEnabled)
+                    return false;
 
                 if (IsValidMapTable(__instance))
                     InjectShipMapDataIntoZdo(__instance.m_nview.GetZDO());
 
                 s_mapTableDataCompressionFlags.Push(IsValidMapTable(__instance) && __instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_mapDataCompressed));
+                __state = true;
+                return true;
             }
 
             public static Exception Finalizer(MapTable __instance, bool __state, Exception __exception)
@@ -1031,19 +1046,22 @@ namespace LongshipUpgrades
         {
             public static bool inCall = false;
 
-            public static void Prefix(MapTable __instance, ref bool __state)
+            public static bool Prefix(MapTable __instance, ref bool __state)
             {
-                inCall = IsShipMapTable(__instance);
-                __state = inCall;
-
-                if (!__state)
-                    return;
+                __state = false;
+                inCall = IsShipMapTable(__instance) && ShipMapsEnabled;
+                if (!IsShipMapTable(__instance))
+                    return true;
+                if (!ShipMapsEnabled)
+                    return false;
 
                 if (IsValidMapTable(__instance))
                     InjectShipMapDataIntoZdo(__instance.m_nview.GetZDO());
 
-                s_mapTableWriteDepth++;
                 s_mapTableDataCompressionFlags.Push(IsValidMapTable(__instance) && __instance.m_nview.GetZDO().GetBool(LongshipCustomizableParts.s_mapDataCompressed));
+                s_mapTableWriteDepth++;
+                __state = true;
+                return true;
             }
 
             public static Exception Finalizer(MapTable __instance, bool __state, Exception __exception)
@@ -1068,21 +1086,28 @@ namespace LongshipUpgrades
         [HarmonyPatch(typeof(MapTable), nameof(MapTable.RPC_MapData))]
         public static class MapTable_RPC_MapData_MarkCompressed
         {
-            public static void Prefix(MapTable __instance, ref byte[] __state)
+            public static bool Prefix(MapTable __instance, ref byte[] __state)
             {
                 __state = null;
-                if (!IsShipMapTable(__instance) || !IsValidMapTable(__instance) || !__instance.m_nview.IsOwner())
-                    return;
+                if (!IsShipMapTable(__instance))
+                    return true;
+                if (!ShipMapsEnabled)
+                    return false;
+                if (!IsValidMapTable(__instance) || !__instance.m_nview.IsOwner())
+                    return true;
 
                 ZDO zdo = __instance.m_nview.GetZDO();
                 InjectShipMapDataIntoZdo(zdo);
+                // The vanilla RPC writes into the live byte-array container.
+                DetachZdoFields(ZDOExtraData.s_byteArrays, zdo.m_uid);
                 if (TryGetShipMapData(zdo.m_uid, out ShipMapDataEntry entry) && entry.Data != null)
                     __state = (byte[])entry.Data.Clone();
+                return true;
             }
 
             public static void Postfix(MapTable __instance, byte[] __state)
             {
-                if (!IsShipMapTable(__instance) || !__instance.m_nview.IsValid() || !__instance.m_nview.IsOwner())
+                if (!ShipMapsEnabled || !IsShipMapTable(__instance) || !IsValidMapTable(__instance) || !__instance.m_nview.IsOwner())
                     return;
 
                 ZDO zdo = __instance.m_nview.GetZDO();
@@ -1096,7 +1121,7 @@ namespace LongshipUpgrades
                 {
                     revision = changed ? Math.Max(1, revision + 1) : Math.Max(1, revision);
                     SetShipMapData(zdo.m_uid, revision, currentMapData);
-                    zdo.Set(LongshipCustomizableParts.s_mapDataCompressed, true);
+                    SetShipMapInt(zdo, LongshipCustomizableParts.s_mapDataCompressed, 1);
                     SyncShipMapRevision(zdo, revision);
 
                     if (ZNet.instance != null && !ZNet.instance.IsServer())
@@ -1123,23 +1148,26 @@ namespace LongshipUpgrades
                 if (__instance.GetPrefab() != LongshipCustomizableParts.prefabInt)
                     return;
 
+                if (!ShipMapsEnabled)
+                {
+                    PurgeShipMapData(__instance);
+                    return;
+                }
+
                 if (!__instance.GetBool(LongshipCustomizableParts.s_mapDataCompressed))
                     return;
 
                 if (!ZDOExtraData.s_byteArrays.TryGetValue(__instance.m_uid, out BinarySearchDictionary<int, byte[]> byteArrays) || !byteArrays.TryGetValue(ZDOVars.s_data, out byte[] mapData) || mapData == null)
                     return;
 
-                __state.Removed = byteArrays.Remove(ZDOVars.s_data);
                 __state.Data = mapData;
-
-                if (__state.Removed && byteArrays.Count == 0)
-                    ZDOExtraData.s_byteArrays.Remove(__instance.m_uid);
+                __state.Removed = RemoveShipMapDataFromRuntime(__instance.m_uid);
             }
 
             public static void Finalizer(ZDO __instance, SerializeState __state)
             {
-                if (__state.Removed)
-                    ZDOExtraData.Set(__instance.m_uid, ZDOVars.s_data, __state.Data);
+                if (__state.Removed && ShipMapsEnabled && IsShipZdo(__instance))
+                    SetShipMapDataInRuntime(__instance.m_uid, __state.Data);
             }
         }
 

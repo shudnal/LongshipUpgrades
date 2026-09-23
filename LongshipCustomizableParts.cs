@@ -516,8 +516,12 @@ namespace LongshipUpgrades
 
         private void RequestMissingShipMapData()
         {
-            if (!m_zdo.GetBool(s_mapTableUpgraded) || !m_zdo.GetBool(s_mapDataCompressed))
+            if (!ShipMapsEnabled || !m_zdo.GetBool(s_mapTableUpgraded) || !m_zdo.GetBool(s_mapDataCompressed))
+            {
+                m_lastRequestedShipMapRevision = 0;
+                m_nextShipMapDataRequestTime = 0f;
                 return;
+            }
 
             int currentRevision = m_zdo.GetInt(s_shipMapDataRevision);
             if (currentRevision <= 0)

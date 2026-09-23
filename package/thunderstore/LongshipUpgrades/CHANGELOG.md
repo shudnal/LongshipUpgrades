@@ -1,3 +1,11 @@
+# 1.0.23
+* Disabling ship map tables now permanently clears their recorded maps, including data on unloaded longships, without removing ship upgrades or cargo.
+* Disabled ship map tables no longer request, accept, or save map uploads.
+* Protected ship map save snapshots from later changes to live map data and metadata containers.
+* Map uploads now mark the ship's save chunk dirty even when its metadata revision arrived before the map payload.
+* Temporary ship map data is now cleaned up even if world-save preparation throws an exception.
+* Added optional ship-map save-stage timings and payload sizes to the existing logging setting.
+
 # 1.0.22
 * Fixed the ship lantern and tent granting the Fire status to players outside the heat area.
 * Ship warmth now validates player overlap continuously and clears stale contacts after leaving, teleporting, or disabling heat.

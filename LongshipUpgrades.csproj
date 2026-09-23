@@ -43,6 +43,7 @@
     <Compile Include="LongshipPropertyBlocks.cs" />
     <Compile Include="LongshipUpgrades.cs" />
     <Compile Include="PrefabAudio.cs" />
+    <Compile Include="ShipMapPersistence.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShipTrophyStand.cs" />
     <Compile Include="ShipTurret.cs" />
@@ -83,6 +84,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\stable\Splatform.dll</HintPath>
     </Reference>
+    <Reference Include="System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL" />
     <Reference Include="UnityEngine">
       <HintPath>..\Assemblies\stable\UnityEngine.dll</HintPath>
     </Reference>
