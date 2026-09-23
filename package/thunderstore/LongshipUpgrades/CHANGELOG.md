@@ -1,3 +1,7 @@
+# 1.0.22
+* Fixed the ship lantern and tent granting the Fire status to players outside the heat area.
+* Ship warmth now validates player overlap continuously and clears stale contacts after leaving, teleporting, or disabling heat.
+
 # 1.0.21
 * Routed the ship lantern and part-switch sounds through the game's volume controls without changing shared vanilla effects.
 

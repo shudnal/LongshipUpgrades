@@ -198,11 +198,17 @@ namespace LongshipUpgrades
             InitializeParts();
         }
 
+        private void OnDisable()
+        {
+            UpdateFireWarmth(false);
+        }
+
         public void OnDestroy()
         {
             if (prefabInit)
                 return;
 
+            UpdateFireWarmth(false);
             s_allInstances.Remove(base.gameObject);
         }
 
@@ -212,7 +218,10 @@ namespace LongshipUpgrades
                 return;
 
             if (m_zdo == null || !m_ship)
+            {
+                UpdateFireWarmth(false);
                 return;
+            }
 
             RequestMissingShipMapData();
 
@@ -236,15 +245,7 @@ namespace LongshipUpgrades
             m_holdersRight?.SetActive(IsTentActive());
             m_holdersLeft?.SetActive(IsTentActive());
 
-            if (m_fireWarmth && m_fireWarmth.m_isHeatType != (m_fireWarmth.m_isHeatType = tentHeat.Value && m_lantern && m_lantern.activeInHierarchy && IsTentActive()))
-            {
-                m_fireWarmth.m_type = m_fireWarmth.m_isHeatType ? EffectArea.Type.Fire | EffectArea.Type.Heat : EffectArea.Type.None;
-                if (Player.m_localPlayer)
-                    if (m_fireWarmth.m_isHeatType && !m_fireWarmth.m_collidedWithCharacter.Contains(Player.m_localPlayer))
-                        m_fireWarmth.m_collidedWithCharacter.Add(Player.m_localPlayer);
-                    else if (!m_fireWarmth.m_isHeatType && m_fireWarmth.m_collidedWithCharacter.Contains(Player.m_localPlayer))
-                        m_fireWarmth.m_collidedWithCharacter.Remove(Player.m_localPlayer);
-            }
+            UpdateFireWarmth(tentHeat.Value && m_lantern && m_lantern.activeInHierarchy && IsTentActive());
 
             m_turretsUpgrade?.SetActive(turretsEnabled.Value);
             m_turrets?.SetActive(turretsEnabled.Value && m_zdo.GetBool(s_turretsUpgraded));
@@ -433,6 +434,56 @@ namespace LongshipUpgrades
             m_headStyles?.SetActive(changeHead.Value);
 
             SetPropertyBlocks();
+        }
+
+        private void UpdateFireWarmth(bool heatActive)
+        {
+            if (!m_fireWarmth)
+                return;
+
+            Collider areaCollider = m_fireWarmth.m_collider;
+            heatActive = heatActive && m_fireWarmth.isActiveAndEnabled && areaCollider && areaCollider.enabled;
+            m_fireWarmth.m_isHeatType = heatActive;
+            m_fireWarmth.m_type = heatActive ? EffectArea.Type.Fire | EffectArea.Type.Heat : EffectArea.Type.None;
+
+            List<Character> characters = m_fireWarmth.m_collidedWithCharacter;
+            if (!heatActive)
+            {
+                // Keep the native trigger counter intact: physical overlaps do not end when heat is disabled.
+                characters.Clear();
+                return;
+            }
+
+            // Reconcile contacts even without a heat-state change; teleports and disabled colliders can skip OnTriggerExit.
+            for (int i = characters.Count - 1; i >= 0; i--)
+                if (!IsInsideFireWarmth(characters[i], areaCollider))
+                    characters.RemoveAt(i);
+
+            // Enabling heat while a player is already inside does not generate a new OnTriggerEnter.
+            Player player = Player.m_localPlayer;
+            if (player && !characters.Contains(player) && IsInsideFireWarmth(player, areaCollider))
+                characters.Add(player);
+        }
+
+        private static bool IsInsideFireWarmth(Character character, Collider areaCollider)
+        {
+            if (!character || !character.isActiveAndEnabled || !character.IsPlayer() || character.IsDead()
+                || !character.m_nview || !character.m_nview.IsValid() || !character.IsOwner())
+                return false;
+
+            CapsuleCollider characterCollider = character.GetCollider();
+            if (!characterCollider || !characterCollider.enabled || !characterCollider.gameObject.activeInHierarchy)
+                return false;
+
+            if (!areaCollider.bounds.Intersects(characterCollider.bounds))
+                return false;
+
+            // Test the actual shapes at their current transforms, not only their axis-aligned bounds or root positions.
+            Transform areaTransform = areaCollider.transform;
+            Transform characterTransform = characterCollider.transform;
+            return Physics.ComputePenetration(areaCollider, areaTransform.position, areaTransform.rotation,
+                                              characterCollider, characterTransform.position, characterTransform.rotation,
+                                              out _, out _);
         }
 
         public void RPC_SetVariant(long uid, int zdoVar, int variant, int effectVariant, string position)
