@@ -130,20 +130,21 @@ namespace LongshipUpgrades
 
         private void Awake()
         {
+            LocalizationManager.Localizer.Initialize();
+
             harmony.PatchAll();
 
             instance = this;
 
             ConfigInit();
             _ = configSync.AddLockingConfigEntry(configLocked);
+            LocalizationManager.Localizer.ApplyCurrentLocalization();
 
             configDirectory = Path.Combine(Paths.ConfigPath, pluginID);
 
             Game.isModded = true;
 
             LoadTextures();
-
-            StartCoroutine(LocalizationManager.Localizer.Load());
         }
 
         public void ConfigInit()
