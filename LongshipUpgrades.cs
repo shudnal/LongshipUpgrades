@@ -130,6 +130,8 @@ namespace LongshipUpgrades
 
         private void Awake()
         {
+            LocalizationManager.Localizer.Initialize();
+
             harmony.PatchAll();
 
             instance = this;
@@ -142,8 +144,6 @@ namespace LongshipUpgrades
             Game.isModded = true;
 
             LoadTextures();
-
-            StartCoroutine(LocalizationManager.Localizer.Load());
         }
 
         public void ConfigInit()
