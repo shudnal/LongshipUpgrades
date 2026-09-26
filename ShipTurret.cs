@@ -184,8 +184,9 @@ namespace LongshipUpgrades
                 });
             }
 
+            // Restore saved targets after filling the catalog; initialization must not claim ship ownership or write targets.
             if (m_nview && m_nview.IsValid())
-                SetTargets();
+                ReadTargets();
 
             return this;
         }

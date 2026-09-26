@@ -1,8 +1,11 @@
+# 1.0.23
+* Fixed longships stopping when another player loads them by preventing turret initialization from taking ship ownership.
+* Preserved turret trophy target filters when loading or reloading a longship.
+
 # 1.0.22
 * Map table data network sync hardening
 * Disabling ship map tables now permanently clears their recorded maps, including data on unloaded longships, without removing ship upgrades or cargo. The server rechecks for remaining map data before every world save.
 * Documented safe mod removal: disable ship map tables, complete a successful world save, then stop the server or game and disable or uninstall the mod.
-
 * Fixed the ship lantern and tent granting the Fire status to players outside the heat area.
 * Ship warmth now validates player overlap continuously and clears stale contacts after leaving, teleporting, or disabling heat.
 
