@@ -1,3 +1,6 @@
+# 1.0.24
+* Fixed the startup language selection. Custom translations now load only from `BepInEx/config` and its subfolders; move existing custom files there.
+
 # 1.0.23
 * Fixed longships stopping when another player loads them by preventing turret initialization from taking ship ownership.
 * Preserved turret trophy target filters when loading or reloading a longship.

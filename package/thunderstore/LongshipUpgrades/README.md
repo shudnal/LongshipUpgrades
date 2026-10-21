@@ -141,15 +141,26 @@ This procedure deletes recorded ship maps and their map metadata, not the ships,
 Repeat this procedure for each world from which you are removing the mod. Restoring an older world backup can restore the map payloads, so clean and save that world again before running it without Longship Upgrades. If the mod has already been removed, reinstall it on the server or host and the connecting clients, then follow the steps above.
 
 ## Localization
-To add your own localization create a file with the name **Longship Upgrades.LanguageName.yml** or **Longship Upgrades.LanguageName.json** anywhere inside of the Bepinex folder. For example, to add a French translation you could create a **Longship Upgrades.French.yml** file inside of the config folder and add French translations there.
 
-Localization file will be loaded on the next game launch or on the next language change.
+The mod includes built-in translations, including Russian. You do not need an external file to use them.
 
-You can send me a file with your localization at [GitHub](https://github.com/shudnal/LongshipUpgrades/issues) or [Nexus](https://www.nexusmods.com/valheim/mods/2885?tab=posts) so I can add it to mod's bundle.
+For a custom translation, create a file named **Longship Upgrades.LanguageName.json** or **Longship Upgrades.LanguageName.yml** in `BepInEx/config` or one of its subfolders. Names without spaces, such as `LongshipUpgrades.Russian.json`, are also supported. Use the game's language name, such as `Russian` or `French`.
+
+Example:
+
+```text
+BepInEx/config/Longship Upgrades.Russian.json
+```
+
+Only `BepInEx/config` and its subfolders are searched. Files in `BepInEx/plugins` or directly in `BepInEx` are ignored. Move any existing custom translation to `config`. With a mod manager, use the active profile's `BepInEx/config` folder.
+
+Keep only one custom file for each language. Do not keep both a JSON and a YAML file for the same language. A custom file replaces the built-in translation for that language; missing entries use English text.
+
+The file is loaded at game startup and when you change the game language. The mod waits for the game's language settings before applying the current language at startup. The `Longship Upgrades.English.json` file next to the plugin DLL is a reference file; copy and rename it in `config` before editing it.
+
+You can send your translation through [GitHub](https://github.com/shudnal/LongshipUpgrades/issues) or [Nexus](https://www.nexusmods.com/valheim/mods/2885?tab=posts) for inclusion in the mod.
 
 [Language list](https://valheim-modding.github.io/Jotunn/data/localization/language-list.html).
-
-English localization example is located in `Longship Upgrades.English.json` file next to plugin dll.
 
 ## Multiplayer requirement
 * Starting with version 1.0.17, Longship Upgrades must be installed on the server and on every connecting client
